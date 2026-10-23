@@ -1,0 +1,9 @@
+{
+  "name": "flow",
+  "version": "0.1.0",
+  "description": "Skills-first way of working: the Flow graph, hard guards, rules, and the per-prompt reminder hook",
+  "author": {
+    "name": "trungtran"
+  },
+  "repository": "https://github.com/ttran-labs/flow"
+}

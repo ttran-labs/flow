@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/flow-reminder.md\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'if [ -f \"${CLAUDE_PLUGIN_ROOT}/scripts/guard-commit.py\" ]; then exec python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/guard-commit.py\"; fi'"
+          },
+          {
+            "type": "command",
+            "command": "sh -c 'if [ -f \"${CLAUDE_PLUGIN_ROOT}/scripts/guard-neurons.py\" ]; then exec python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/guard-neurons.py\"; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}

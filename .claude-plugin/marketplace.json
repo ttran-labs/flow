@@ -1,0 +1,21 @@
+{
+  "name": "flow",
+  "owner": {
+    "name": "trungtran"
+  },
+  "description": "Personal marketplace: the flow plugin",
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official", "humanizer", "ponytail"],
+  "plugins": [
+    {
+      "name": "flow",
+      "source": "./",
+      "description": "Skills-first way of working: the Flow graph, hard guards, rules, and the per-prompt reminder hook",
+      "dependencies": [
+        { "name": "mattpocock-skills", "marketplace": "claude-plugins-official" },
+        { "name": "context7", "marketplace": "claude-plugins-official" },
+        { "name": "humanizer", "marketplace": "humanizer" },
+        { "name": "ponytail", "marketplace": "ponytail" }
+      ]
+    }
+  ]
+}
