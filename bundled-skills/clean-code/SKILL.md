@@ -12,27 +12,28 @@ number from here.
 
 ## Thresholds
 
-Enforced at review and refactor time, never inside the red → green loop.
-Violations name the fix.
+Hints, not limits. A review may name one as a minor note, never as critical or
+major, and never asks for a split because of one. The coverage floor is the
+exception: it still blocks. Never applied inside the red → green loop.
 
-| Unit | Limit | On violation |
+| Unit | Hint | What to look at |
 |---|---|---|
-| Function length | ≤40 lines | Review: separate steps or separate ideas? Keep it whole if it reads top to bottom |
-| Function params | ≤3 | Introduce parameter object |
-| Cognitive complexity | ≤15 | Invert conditions, return early |
-| Cyclomatic complexity | ≤10 | Replace conditional with polymorphism |
-| Nesting depth | ≤4 | Guard clauses, early return |
-| Class | ≤200 lines, ≤20 methods | Extract class |
-| File | ≤500 lines (target 200–300) | Split module |
-| Package | <20 classes | Split package |
+| Function length | ≤40 lines | Separate steps or separate ideas? Keep it whole if it reads top to bottom |
+| Function params | ≤3 | Do some params always travel together? |
+| Cognitive complexity | ≤15 | Would inverted conditions or early returns read flatter? |
+| Cyclomatic complexity | ≤10 | Is a chain of branches switching on a type code? |
+| Nesting depth | ≤4 | Would guard clauses read flatter? |
+| Class | ≤200 lines, ≤20 methods | Does it change for more than one reason? |
+| File | ≤500 lines (target 200–300) | Does it hold more than one concept? |
+| Package | <20 classes | Do its classes share one purpose? |
 | Line | 80–120 chars | Wrap |
-| Duplication | ≤3% (>6 lines or >50 tokens) | Extract the missing abstraction |
+| Duplication | ≤3% (>6 lines or >50 tokens) | Does one fact live in two places? |
 | Coverage | ≥90% overall, ≥95% critical paths | Add tests before merge |
 | Unit test | <100ms | Move it to the integration suite |
 
 ## Design principles — the signal matters, not the definition
 
-- **SRP** — one reason to change. Signal: class over the method limit, or high LCOM.
+- **SRP** — one reason to change. Signal: class over the method hint, or high LCOM.
 - **OCP** — signal: if/else or switch chain on a type code → polymorphism.
 - **LSP** — signal: `NotImplementedException` in a subclass, or a base-class test
   failing on a derived type.

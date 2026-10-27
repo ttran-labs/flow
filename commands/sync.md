@@ -28,16 +28,30 @@ existing local copies.
    on as it is and carry on: a skipped neurons does not fail the sync. Any
    other non-zero exit is a failed neurons install: report its output as
    an error and still carry on with the steps below.
-5. After the files are installed and the neurons step has finished
-   (installed, skipped or failed), tell the user:
+5. Check the tool versions: run
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sync-tools.py" "${CLAUDE_PLUGIN_ROOT}"
+   and pass its report on as it is. It keeps ~/.claude/flow/tools.yml,
+   which says which version of each tool flow installed runs: a newly
+   installed tool gets an entry at flow's default version, and a tool flow
+   no longer lists loses its entry. A listed tool that is not installed
+   keeps its entry, and the report says it is not installed. No output
+   means every tool already runs flow's default. For each line
+   "<tool>: tools.yml runs <version>, flow's default is <default>", ask the
+   user with the question tool whether to keep <version> or switch to
+   <default>. Keep: nothing to do; sync asks again while the two differ.
+   Switch: run the same command with `--switch <tool>` added and report its
+   line. A non-zero exit is a failed tools step: report its output as an
+   error and still carry on with the steps below.
+6. After the files are installed and the neurons and tools steps have
+   finished, tell the user:
    "Run /reload-plugins now to pick up the changes in this session
    (or restart Claude Code). New sessions auto-load on start."
-6. Inspect ~/.claude/settings.json for a legacy manual UserPromptSubmit hook
+7. Inspect ~/.claude/settings.json for a legacy manual UserPromptSubmit hook
    that cats a flow-reminder file. If present, warn: the plugin hook now
    injects the reminder, so every prompt is being double-injected. Recommend
    removing the manual hook, but do not edit settings.json without the
    user's explicit confirmation.
-7. Keep commit and PR attribution off. ~/.claude/settings.json must contain
+8. Keep commit and PR attribution off. ~/.claude/settings.json must contain
    `"attribution": {"commit": "", "pr": "", "sessionUrl": false}` and
    `"includeCoAuthoredBy": false` (the older key, still read by older
    Claude Code versions). If either is missing or different, apply it when

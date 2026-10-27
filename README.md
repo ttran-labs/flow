@@ -46,6 +46,9 @@ Then run `/flow:sync` once. It copies `CLAUDE.md`, `rules/` and the bundled
 skills into `~/.claude`. Don't skip it: plugin hooks only reach the main
 session, and subagents only see the rules through those copied files.
 
+Sync checks the tools flow includes with Python, so the `python3` on your PATH
+needs PyYAML: `python3 -m pip install pyyaml`.
+
 Sync also tries to install neurons, the MCP server behind the thinking graph
 the rules ask for. neurons stays private until its first public release, so
 for now sync skips it and says why. Without neurons, the thinking graph
