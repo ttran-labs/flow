@@ -1,24 +1,16 @@
-# Output — messages, diagrams, PRs, explainers
+# Output — questions, diagrams, PRs, explainers
 
 Skills: humanizer (PRs, issues, comments), explainer and teach (explainers).
 
-## Messages
+## Questions
 
-- Say where things stand first; end on the reader's next decision.
-- Numbers over adjectives: "coverage 88.3% -> 94.1%", not "much better".
-- Every question opens with its path on its own line: [ goal ] > [ area ] >
-  [ scope ], with a space inside each bracket. Then the question, then the
-  answers to choose from, recommended one first. A decision with 2 to 4
-  options goes through Claude Code's question tool in the same order; an
-  open question stays as text. When more than 3 questions are open, show a
-  map of them first.
-- Plain, concrete words, in prose and in code strings (flags, errors, docs).
-  No grand abstract vocabulary for ordinary things; use the project's own
-  words.
-- Pushback that comes with a confused comment ("still not clear") means the
-  proposal was not understood, not "no". Keep the proposal and explain it
-  again with new before/after examples on different data. Only a bare no is
-  final; never file tickets or change plans on an unclear reject.
+- Before asking the owner anything, and always after research or another
+  agent's result comes back, explain what came back first, best with a code
+  snippet or example data.
+- One question at a time. The owner's follow-ups are discussion; the next
+  question waits until this one is settled.
+- Each question, its discussion and the path taken go in the thinking graph
+  as they happen.
 
 ## Diagrams
 
