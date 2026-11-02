@@ -54,6 +54,11 @@ the rules ask for. neurons stays private until its first public release, so
 for now sync skips it and says why. Without neurons, the thinking graph
 check stays off and commits go through.
 
+Sync keeps every machine on the Claude Code version flow pins. When yours
+differs, it prints the install command for that version; it never runs the
+installer itself. It also turns off Claude Code's background updates, or shows
+the setting to add.
+
 To use graphify in a project, add it to the project's `.mcp.json` and build
 the graph once with `/graphify`:
 

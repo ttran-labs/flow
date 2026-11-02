@@ -58,3 +58,18 @@ existing local copies.
    permitted; Claude Code blocks Claude from editing its own settings in auto
    mode, so otherwise show the user the exact JSON to add. Report: attribution
    already off, or the change the user still needs to make.
+9. Keep Claude Code on the pinned version, 2.1.287. ~/.claude/settings.json
+   must contain `"env": {"DISABLE_AUTOUPDATER": "1"}`, so background updates
+   don't move Claude Code off the pin. If it is missing or different, apply
+   it when permitted: edit the file in place, add the key to the `env`
+   already there, keep every other key, and leave no copy of the file
+   behind. Otherwise show the user `"env": {"DISABLE_AUTOUPDATER": "1"}` and
+   say to add the key inside an `env` that already exists, never replace it;
+   never print the values already in `env`. Then run `claude --version`.
+   When it reports another version, tell the user to run
+   `curl -fsSL https://claude.ai/install.sh | bash -s <pinned version>`, with
+   the pinned version filled in, and then restart Claude Code. Never run the
+   install yourself. When the user has both to do, the setting comes first:
+   restarting without it lets the startup update check move Claude Code past
+   the pin. Report: Claude Code pinned, or what the user still needs to do,
+   in that order.
