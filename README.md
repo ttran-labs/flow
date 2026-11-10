@@ -49,10 +49,11 @@ session, and subagents only see the rules through those copied files.
 Sync checks the tools flow includes with Python, so the `python3` on your PATH
 needs PyYAML: `python3 -m pip install pyyaml`.
 
-Sync also tries to install neurons, the MCP server behind the thinking graph
-the rules ask for. neurons stays private until its first public release, so
-for now sync skips it and says why. Without neurons, the thinking graph
-check stays off and commits go through.
+Sync also installs neurons, the MCP server behind the thinking graph the
+rules ask for, from its public release with curl; it needs no gh. Releases
+ship for Apple Silicon macOS and x86_64 Linux. On any other platform sync
+reports the neurons install as failed and finishes the rest. Without
+neurons, the thinking graph check stays off and commits go through.
 
 Sync keeps every machine on the Claude Code version flow pins. When yours
 differs, it prints the install command for that version; it never runs the

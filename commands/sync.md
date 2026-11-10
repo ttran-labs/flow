@@ -20,14 +20,14 @@ existing local copies.
    what else is missing.
 4. Install or update the neurons layer: run
    bash "${CLAUDE_PLUGIN_ROOT}/scripts/install-neurons.sh" and report its
-   output. It pulls the latest neurons release binary (platform-aware),
-   installs it, and registers the MCP server if absent - idempotent.
-   neurons installs from a private repo until its public release, so when
-   gh is missing, not logged in, or cannot read that repo, the script
-   prints "neurons skipped:" with the reason and exits 0. Pass that line
-   on as it is and carry on: a skipped neurons does not fail the sync. Any
-   other non-zero exit is a failed neurons install: report its output as
-   an error and still carry on with the steps below.
+   output. It curls the public ttran-labs/neurons release for this
+   platform (aarch64-apple-darwin or x86_64-unknown-linux-gnu), checks the
+   tarball's sha256 against the release's tools.lock, installs neuron and
+   neuron-mcp, and registers the MCP server if absent - idempotent: at the
+   released version it downloads no tarball. A non-zero exit is a failed
+   neurons install (an unsupported platform, a sha256 mismatch, no
+   network, no claude on PATH): report its output as an error and still
+   carry on with the steps below.
 5. Check the tool versions: run
    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sync-tools.py" "${CLAUDE_PLUGIN_ROOT}"
    and pass its report on as it is. It keeps ~/.claude/flow/tools.yml,
