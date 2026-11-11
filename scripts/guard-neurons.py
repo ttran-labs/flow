@@ -3,7 +3,8 @@
 
 Checks the newest neurons db modified time. If no db was written in the
 last 2 hours, the commit is blocked with guidance. A machine without neurons
-(no graph db, and no neuron-mcp on PATH or in ~/.cargo/bin) is not checked.
+(no graph db, and no neuron-mcp on PATH, from mise or in ~/.cargo/bin) is not
+checked.
 Only fires on git commit commands (same pattern as guard-commit.py).
 """
 import json
@@ -12,6 +13,9 @@ import shutil
 import sys
 import time
 from pathlib import Path
+
+# mise keeps this link on the neurons version its global lock selects.
+MISE_NEURON_MCP = ".local/share/mise/installs/github-ttran-labs-neurons/global/neuron-mcp"
 
 
 def main():
@@ -32,10 +36,11 @@ def main():
     dbs = list(root.glob("**/neurons.db*")) if root.exists() else []
 
     if not dbs:
-        # neurons is not public yet, so most machines don't have it. Only a
-        # machine with its MCP server installed is asked for a graph: on
-        # PATH, or in ~/.cargo/bin where the neurons installer puts it.
+        # Only a machine with the neurons MCP server installed is asked for a
+        # graph: on PATH, where /flow:sync's mise keeps it, or in ~/.cargo/bin
+        # where the old neurons installer put it.
         is_installed = (shutil.which("neuron-mcp") is not None
+                        or (home / MISE_NEURON_MCP).exists()
                         or (home / ".cargo/bin/neuron-mcp").exists())
         if not is_installed:
             return

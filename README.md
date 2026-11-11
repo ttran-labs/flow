@@ -13,6 +13,9 @@ tied to one machine.
 - `bundled-skills/`: skills written for this setup that no plugin provides.
   `/flow:sync` copies them into `~/.claude/skills/`.
 - `commands/sync.md`: the `/flow:sync` command.
+- `mise/flow/`: flow's mise setup. It says which files `/flow:sync` copies
+  into `~/.claude` and which tools flow installs, each at the newest release
+  inside a major.
 - `hooks/` and `scripts/`: one hook adds `flow-reminder.md` to every prompt.
   The others check each `git commit` Claude runs: no AI attribution in the
   message, no ticket work on `main`, and a thinking graph written in the
@@ -42,18 +45,29 @@ uv tool install graphifyy            # graphify; the package name has two y's
 graphify install --platform claude
 ```
 
-Then run `/flow:sync` once. It copies `CLAUDE.md`, `rules/` and the bundled
-skills into `~/.claude`. Don't skip it: plugin hooks only reach the main
-session, and subagents only see the rules through those copied files.
+Sync needs [mise](https://mise.jdx.dev). Without it, `/flow:sync` stops and
+prints the install command, pinned to the mise release flow is tested on:
 
-Sync checks the tools flow includes with Python, so the `python3` on your PATH
-needs PyYAML: `python3 -m pip install pyyaml`.
+```sh
+curl -fsSL https://mise.run | MISE_VERSION=v2026.11.5 sh
+```
 
-Sync also installs neurons, the MCP server behind the thinking graph the
-rules ask for, from its public release with curl; it needs no gh. Releases
-ship for Apple Silicon macOS and x86_64 Linux. On any other platform sync
-reports the neurons install as failed and finishes the rest. Without
-neurons, the thinking graph check stays off and commits go through.
+Then run `/flow:sync` once. It links flow's mise folder as
+`~/.config/mise/conf.d/flow`, and mise copies `CLAUDE.md`, `rules/` and the
+bundled skills into `~/.claude`, removing a rule or skill flow dropped and
+keeping your own. Don't skip it: plugin hooks only reach the main session,
+and subagents only see the rules through those copied files. Your own
+`~/.config/mise/config.toml` is never edited. If you pick dotfile groups with
+mise's `[bootstrap] dotfile_groups`, list `flow-rules` and `flow-skills`
+there too, or the next sync removes flow's rules and skills from `~/.claude`.
+
+mise also installs the tools flow uses: lefthook, gitleaks, and neurons, the
+MCP server behind the thinking graph the rules ask for, from its public
+release. Releases ship for Apple Silicon macOS and x86_64 Linux. Each tool
+names a major in flow's folder; the exact versions are in mise's global
+lock, which `mise run flow:sync` writes and every sync moves to the newest
+release inside that major. The lint tools load only in flow's own hook tasks, so your
+shell and your builds keep their own versions.
 
 Sync keeps every machine on the Claude Code version flow pins. When yours
 differs, it prints the install command for that version; it never runs the

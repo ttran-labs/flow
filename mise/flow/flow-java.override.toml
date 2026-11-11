@@ -1,0 +1,16 @@
+# The Java lint tools. Linked as ~/.config/mise/config.flow-java.override.toml,
+# they load only under `mise -E flow-java`: there they run at the locked
+# version and beat the project's own mise config and [env]; nowhere else do
+# they reach a shell, `mise exec` or a build.
+[tools]
+java = "temurin-21"
+checkstyle = "14"
+"github:pmd/pmd" = { version = "7", asset_pattern = "pmd-dist-*-bin.zip", version_prefix = "pmd_releases/" }
+jbang = "0.143"
+maven = "3"
+python = "3"
+
+[env]
+# A project's own [env] JAVA_HOME would otherwise win over the tool's. The if
+# keeps mise from failing on a machine where Java is not installed yet.
+JAVA_HOME = { value = '{% if tools.java %}{{ tools.java.path }}{% endif %}', tools = true }
