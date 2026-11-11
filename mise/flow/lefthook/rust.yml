@@ -1,0 +1,2 @@
+# flow's Rust checks, none yet. mise run flow:setup-hooks extends this file,
+# by its absolute path, from each repo with a Rust build file at its root.

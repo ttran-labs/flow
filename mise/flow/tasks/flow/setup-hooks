@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+#MISE description="Point this repo's git hooks at flow's checks for the languages it builds"
+#MISE hide=true
+#MISE tools={python="3"}
+"""Gives the repo it runs in flow's checks. It finds the languages from the
+build files at the repo root and writes .config/lefthook-local.yml, which
+extends flow's job file for each of those languages, keeps that file and the
+hidden .config/flow folder out of git through the global ignore file, and
+installs the hooks. The repo's own lefthook config stays as it is; lefthook
+merges the two. A local config the owner wrote is never changed: the lines
+to add are printed instead, in that file's format."""
+import itertools
+import json
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+# A language's checks run in a repo whose root holds one of its build files.
+BUILD_FILES = {
+    "java": ("pom.xml", "build.gradle", "build.gradle.kts"),
+    "python": ("pyproject.toml", "setup.py", "setup.cfg"),
+    "rust": ("Cargo.toml",),
+    "typescript": ("package.json", "tsconfig.json"),
+}
+LOCAL_CONFIG = Path(".config/lefthook-local.yml")
+RC_FILE = Path(".config/flow/lefthook-rc")
+# Each line flow adds to the global ignore file, with the file it keeps out.
+IGNORE_LINES = {"lefthook-local.yml": LOCAL_CONFIG, ".config/flow/": RC_FILE}
+# Every worktree of a repo shares one set of hooks, and the last lefthook
+# install writes this value into them as sh, unquoted. Found at run time, it
+# names the rc of the worktree git commits in, so removing another worktree
+# never breaks it.
+RC_IN_THE_COMMITTING_WORKTREE = f'"$(git rev-parse --show-toplevel)/{RC_FILE}"'
+NOT_A_REPO = ("Run this inside a git repository: cd into it, then run mise run flow:setup-hooks "
+              "again.")
+NO_LEFTHOOK = "lefthook is missing: run /flow:sync, which installs it, then run this again."
+NO_MISE_ON_PATH = "mise is not on PATH: add its folder to PATH, then run this again."
+JOB_FILE_MISSING = "{} is missing, so flow's checks can't run: run /flow:sync, then commit again."
+
+
+def find_global_lefthook(mise):
+    """mise's global link to lefthook. mise moves it on every lefthook bump,
+    so hooks that call it keep working after one."""
+    doctor = subprocess.run([mise, "doctor", "--json"], capture_output=True, text=True)
+    data_dir = Path(json.loads(doctor.stdout)["dirs"]["data"])
+    return data_dir / "installs/lefthook/global/lefthook"
+
+
+def detect_languages():
+    """The languages the repo root holds a build file of."""
+    return [language for language, build_files in BUILD_FILES.items()
+            if any(Path(build_file).exists() for build_file in build_files)]
+
+
+def find_job_files(languages):
+    """flow's job file for each of languages. MISE_CONFIG_ROOT is the conf.d
+    link /flow:sync points at the current plugin, so these paths outlive a
+    plugin update."""
+    jobs_folder = Path(os.environ["MISE_CONFIG_ROOT"]) / "lefthook"
+    return [str(jobs_folder / f"{language}.yml") for language in languages]
+
+
+def render_settings(settings, file_format):
+    """Where the settings go in a lefthook config in file_format, and the
+    lines it can take. A JSON string is also a valid YAML and TOML string, so
+    a path holding ' #' or a quote stays whole."""
+    match file_format:
+        case ".json" | ".jsonc":
+            return ("Add these keys to its top-level object",
+                    json.dumps(settings, indent=2, ensure_ascii=False) + "\n")
+        case ".toml":
+            placement, separator = "Add these lines to its top, above every table", " = "
+        case _:
+            placement, separator = "Add these lines to it", ": "
+
+    return placement, "".join(f"{key}{separator}{json.dumps(value, ensure_ascii=False)}\n"
+                              for key, value in settings.items())
+
+
+def render_local_config(settings):
+    _, config_text = render_settings(settings, LOCAL_CONFIG.suffix)
+    return config_text
+
+
+def find_global_ignore_file():
+    """The ignore file git reads for every repo: core.excludesFile, includes
+    followed and ~ expanded, or without one the default file."""
+    excludes_file = subprocess.run(["git", "config", "--path", "core.excludesFile"],
+                                   capture_output=True, text=True).stdout.strip()
+    if excludes_file:
+        return Path(excludes_file)
+
+    config_home = os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config"
+    return Path(config_home) / "git/ignore"
+
+
+def ignore_flow_files():
+    """The local config and the hidden flow folder are the owner's own, in
+    every repo, so the global ignore file keeps them out of git. The newline
+    first keeps a last line with no newline whole."""
+    missing_lines = [line for line, path in IGNORE_LINES.items()
+                     if subprocess.run(["git", "check-ignore", "-q", path]).returncode != 0]
+    if not missing_lines:
+        return
+
+    ignore_file = find_global_ignore_file()
+    ignore_file.parent.mkdir(parents=True, exist_ok=True)
+    with ignore_file.open("a") as ignore:
+        ignore.write("\n" + "".join(f"{line}\n" for line in missing_lines))
+
+
+def write_rc(mise, job_files):
+    """lefthook sources this file before every hook. A GUI git client starts
+    hooks with the system PATH, which has no mise, so mise's folder goes on
+    it, appended so a shell's own mise wins. lefthook skips a missing extends
+    file without a word, so a job file gone with a dead conf.d link blocks
+    the commit here."""
+    lines = [f'PATH="$PATH":{shlex.quote(str(Path(mise).parent))}', "export PATH"]
+    lines += [f"[ -f {shlex.quote(job_file)} ] || "
+              f"{{ echo {shlex.quote(JOB_FILE_MISSING.format(job_file))}; exit 1; }}"
+              for job_file in job_files]
+    RC_FILE.parent.mkdir(parents=True, exist_ok=True)
+    RC_FILE.write_text("".join(f"{line}\n" for line in lines))
+
+
+def is_task_written_local_config(config, settings):
+    """The local config a run of this task wrote, for any of flow's
+    languages. A rerun rewrites it, so a build file added since gets its
+    checks. An edit makes the file the owner's, except one that only adds
+    or drops flow's own job files: that reads as another run's file."""
+    if config != LOCAL_CONFIG:
+        return False
+
+    text = config.read_text()
+    return any(render_local_config({**settings, "extends": find_job_files(languages)}) == text
+               for count in range(len(BUILD_FILES) + 1)
+               for languages in itertools.combinations(BUILD_FILES, count))
+
+
+def find_owners_local_config(settings):
+    """A lefthook-local config this task did not write, or None. lefthook
+    reads only one local config, so a second one would never load."""
+    configs = [*Path().glob("lefthook-local.*"), *Path().glob(".lefthook-local.*"),
+               *Path().glob(".config/lefthook-local.*")]
+    return next((config for config in configs
+                 if not is_task_written_local_config(config, settings)), None)
+
+
+def install_hooks(lefthook, config_text):
+    """Write the local config and install the hooks. Until they are
+    installed, any stop, a failure or an interruption, takes the local
+    config back out, so a rerun starts clean."""
+    # lefthook install writes a blank lefthook.yml into a repo with no main
+    # config, even when it fails. The local config loads without one.
+    had_lefthook_yml = Path("lefthook.yml").exists()
+    LOCAL_CONFIG.parent.mkdir(exist_ok=True)
+    LOCAL_CONFIG.write_text(config_text)
+
+    is_installed = False
+    try:
+        is_installed = subprocess.run([lefthook, "install"]).returncode == 0
+    finally:
+        if not had_lefthook_yml:
+            Path("lefthook.yml").unlink(missing_ok=True)
+
+        if not is_installed:
+            LOCAL_CONFIG.unlink()
+
+    return is_installed
+
+
+def main():
+    repo_root = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE,
+                               text=True)
+    if repo_root.returncode != 0:
+        sys.exit(NOT_A_REPO)
+
+    os.chdir(repo_root.stdout.strip())
+
+    # mise runs a task without adding its own folder to PATH.
+    mise = shutil.which("mise")
+    if mise is None:
+        sys.exit(NO_MISE_ON_PATH)
+
+    lefthook = find_global_lefthook(mise)
+    if not lefthook.exists():
+        sys.exit(NO_LEFTHOOK)
+
+    languages = detect_languages()
+    # The lefthook option runs mise's lefthook ahead of any other on PATH.
+    # One quoted sh word: lefthook writes it into the hooks as it is.
+    settings = {"lefthook": shlex.quote(str(lefthook)), "rc": RC_IN_THE_COMMITTING_WORKTREE,
+                "extends": find_job_files(languages)}
+    config_text = render_local_config(settings)
+
+    write_rc(mise, settings["extends"])
+    ignore_flow_files()
+
+    owners_config = find_owners_local_config(settings)
+    if owners_config is not None:
+        placement, lines = render_settings(settings, owners_config.suffix)
+        print(f"{owners_config} already exists, so it stays as it is. {placement}:\n")
+        print(lines)
+        print(f"Then run {shlex.quote(str(lefthook))} install.")
+        return
+
+    if not install_hooks(lefthook, config_text):
+        sys.exit("lefthook install failed: fix what it printed above, then run this again.")
+
+    checked = ", ".join(languages) or "no language: no build file flow knows is at its root"
+    print(f"This repo now runs flow's checks for {checked}.")
+
+
+if __name__ == "__main__":
+    main()

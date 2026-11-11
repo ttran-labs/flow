@@ -12,10 +12,11 @@ tied to one machine.
   that explains how.
 - `bundled-skills/`: skills written for this setup that no plugin provides.
   `/flow:sync` copies them into `~/.claude/skills/`.
-- `commands/sync.md`: the `/flow:sync` command.
+- `commands/`: the `/flow:sync` and `/flow:setup-hooks` commands.
 - `mise/flow/`: flow's mise setup. It says which files `/flow:sync` copies
   into `~/.claude` and which tools flow installs, each at the newest release
-  inside a major.
+  inside a major. It also holds flow's tasks and the lefthook job file for
+  each language.
 - `hooks/` and `scripts/`: one hook adds `flow-reminder.md` to every prompt.
   The others check each `git commit` Claude runs: no AI attribution in the
   message, no ticket work on `main`, and a thinking graph written in the
@@ -80,6 +81,20 @@ the graph once with `/graphify`:
 ```json
 {"mcpServers": {"graphify": {"command": "graphify-mcp", "args": ["graphify-out/graph.json"]}}}
 ```
+
+## Checks in a repo
+
+Run `/flow:setup-hooks` once at the root of each repo, after `/flow:sync`.
+It finds the repo's languages from its build files (Java, Python, Rust,
+TypeScript), writes `.config/lefthook-local.yml` extending flow's job files
+for only those languages, and installs the git hooks. Every commit then
+runs those checks, also from a GUI git client like IntelliJ. It adds the
+files it writes to git's global ignore file, so `git status` stays clean.
+
+A new worktree needs it too: the local config is ignored, so `git worktree
+add` leaves it out, and a commit there runs no checks until you run
+`mise run flow:setup-hooks` in the worktree. The git-convention skill does
+that for every ticket worktree.
 
 ## Update
 

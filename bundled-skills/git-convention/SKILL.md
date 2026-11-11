@@ -29,13 +29,19 @@ Folder: `<project>:worktree/<project>-<ticket id>` next to the main checkout,
 with `#` dropped from the folder name. On Windows use `<project>.worktree`,
 because `:` is not allowed there.
 
+Then run flow's setup-hooks inside the new worktree, so its commits run the
+same checks: the local lefthook config is ignored, so the new worktree has
+none until then.
+
 From ~/Personal/flow, for ticket #<n>:
 
 ```
 git worktree add ../flow:worktree/flow-<n> -b refactors/#<n>/pytest-suite
+cd ../flow:worktree/flow-<n> && mise run flow:setup-hooks
 ```
 
-Done when: `git worktree list` shows the new folder on the new branch.
+Done when: `git worktree list` shows the new folder on the new branch, and
+setup-hooks printed that the repo runs flow's checks.
 
 ## 3. Commit
 

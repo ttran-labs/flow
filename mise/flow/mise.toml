@@ -44,6 +44,9 @@ mode = "copy"
 # lefthook starts each job in the repository root; without this, flow's
 # tasks would run in this folder.
 dir = "{{ cwd }}"
+# The tasks with real logic, in Python. A file's path names its task:
+# tasks/flow/setup-hooks is flow:setup-hooks.
+includes = ["tasks"]
 
 [tasks."flow:sync"]
 description = "Install flow's payload, move every tool to the newest release inside its major, and register the neurons MCP server"
