@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+#MISE description="Register the neurons MCP server at mise's global link, and remove registrations and binaries of other neurons builds"
+#MISE hide=true
+#MISE dir="{{ env.HOME }}"
+#MISE tools={python="3"}
+#MISE depends=["flow:sync:neurons"]
+#MISE sources=["{{ config_root }}/tasks/flow/sync/neurons-registration", "{{ env.HOME }}/.claude.json"]
+"""Every session runs the neurons mise installed: one user-scope registration
+at mise's global link, which follows every neurons bump. A user-scope one at
+another build is registered again at the link, a local-scope one at another
+build is removed, since local scope beats user scope, and the binaries flow's
+old installer put in ~/.cargo/bin go once the registration is switched. Each
+registration is judged by its command, never by `claude mcp get`'s health
+check, which fails while a live session holds the project's graph.
+
+Claude Code keeps the registrations in ~/.claude.json, so that file is a
+source: a registration changed there reruns this module with flow's files
+unchanged. A module of its own, since Claude Code rewrites that file nearly
+every session, and flow:sync:neurons would move neurons with it."""
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+OLD_BUILD_FOLDER = Path.home() / ".cargo/bin"
+
+# mise hands a task no data dir, so it comes from mise itself, as in
+# flow:setup-hooks.
+doctor = subprocess.run(["mise", "doctor", "--json"], capture_output=True, text=True)
+data_dir = Path(json.loads(doctor.stdout)["dirs"]["data"])
+neuron_mcp_link = str(data_dir / "installs/github-ttran-labs-neurons/global/neuron-mcp")
+# User scope sits at the top, local scope under each project folder.
+# ponytail: reads ~/.claude.json only; a machine that sets CLAUDE_CONFIG_DIR
+# needs that folder's .claude.json read instead.
+claude_config_file = Path.home() / ".claude.json"
+claude_config = json.loads(claude_config_file.read_text()) if claude_config_file.exists() else {}
+
+
+def run_claude_mcp(*arguments):
+    if subprocess.run(["claude", "mcp", *arguments]).returncode != 0:
+        sys.exit(f"`claude mcp {' '.join(arguments)}` failed")
+
+
+user_entry = claude_config.get("mcpServers", {}).get("neurons")
+is_user_entry_at_link = user_entry is not None and user_entry.get("command") == neuron_mcp_link
+if user_entry is not None and not is_user_entry_at_link:
+    run_claude_mcp("remove", "-s", "user", "neurons")
+
+if not is_user_entry_at_link:
+    run_claude_mcp("add", "-s", "user", "neurons", "--", neuron_mcp_link)
+
+gone_folders = []
+for folder, project in claude_config.get("projects", {}).items():
+    entry = project.get("mcpServers", {}).get("neurons")
+    if entry is None or entry.get("command") == neuron_mcp_link:
+        continue
+
+    if not Path(folder).is_dir():
+        gone_folders.append(folder)
+        continue
+
+    # claude mcp finds a local-scope entry by the folder it runs in, under its
+    # git repo's root; an entry made before the folder joined a repo is not
+    # found there.
+    if subprocess.run(["claude", "mcp", "remove", "-s", "local", "neurons"], cwd=folder).returncode != 0:
+        sys.exit(f"Could not remove the local-scope neurons entry of {folder}: delete "
+                 f'projects["{folder}"].mcpServers.neurons in ~/.claude.json, then run /flow:sync again')
+
+if gone_folders:
+    print("neurons stays registered for folders that no longer exist: " + ", ".join(gone_folders))
+
+for program in ("neuron", "neuron-mcp"):
+    old_build = OLD_BUILD_FOLDER / program
+    if old_build.exists():
+        old_build.unlink()
+        print(f"Removed {old_build}, an old neurons build")

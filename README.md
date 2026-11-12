@@ -79,7 +79,11 @@ lock, which `mise run flow:sync` writes. Each tool but gitleaks has a module
 that reruns only when its own files changed, and then moves that tool to the
 newest release inside its major; a sync with nothing changed skips them all.
 gitleaks has no module yet and moves on every sync. `mise run --force
-flow:sync` moves every tool now. The lint tools load only
+flow:sync` moves every tool now. Every session runs the neurons mise
+installed: sync registers its MCP server at mise's global link, switches a
+user-scope registration that runs another build, removes the local-scope ones
+that do, and deletes the `neuron` and `neuron-mcp` that flow's old installer
+put in `~/.cargo/bin`. The lint tools load only
 in flow's own hook tasks, so your shell and your builds keep their own
 versions.
 

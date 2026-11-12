@@ -12,7 +12,7 @@ minimum_release_age_excludes = ["github:ttran-labs/neurons"]
 "github:ttran-labs/neurons" = { version = "2", version_prefix = "neurons--v" }
 
 [tasks."flow:sync:neurons"]
-description = "Move neurons to the newest release inside its major and register its MCP server"
+description = "Move neurons to the newest release inside its major"
 hide = true
 dir = "{{ env.HOME }}"
 lock = "mise-global-lockfile"
@@ -22,6 +22,4 @@ run = [
   "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} github:ttran-labs/neurons",
   "mise -E flow-java,flow-rust upgrade --global github:ttran-labs/neurons",
   "mise -E flow-java,flow-rust install github:ttran-labs/neurons",
-  # The global link follows every neurons bump, so this registers once.
-  'claude mcp get neurons >/dev/null 2>&1 || claude mcp add -s user neurons -- "$HOME/.local/share/mise/installs/github-ttran-labs-neurons/global/neuron-mcp"',
 ]
