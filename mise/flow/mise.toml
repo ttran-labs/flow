@@ -11,6 +11,13 @@ min_version = "2026.11.5"
 # still skip.
 task.source_freshness_hash_contents = true
 
+# mise installs maven through aqua, whose entry fetches every version from
+# archive.apache.org, a host that can go minutes without answering. Maven
+# Central serves the same binary and checksum files, but its .sha512 starts
+# at 3.9.1, so older versions stay on the archive and keep their checksum.
+[settings.url_replacements]
+'regex:^https://archive\.apache\.org/dist/maven/maven-[0-9]+/(3\.9\.[1-9][^/]*|3\.[1-9][0-9][^/]*|[4-9]\.[^/]*)/binaries/(.+)$' = "https://repo1.maven.org/maven2/org/apache/maven/apache-maven/$1/$2"
+
 # Each tool has its own folder in ../tools, with its tool line and its
 # module: a machine tool's flow:sync:<tool>, a lint or coverage tool's
 # flow:setup:<tool>, whose tool line loads only under `mise -E flow-<language>`.
