@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+#MISE description="Move the flow-<language> override files' tools to the newest release inside each major"
+#MISE hide=true
+#MISE dir="{{ env.HOME }}"
+#MISE lock="mise-global-lockfile"
+#MISE tools={python="3"}
+#MISE env={FLOW_LOCK_PLATFORM="{{ os() }}-{{ arch() }}"}
+#MISE sources=["{{ config_root }}/flow-java.override.toml", "{{ config_root }}/flow-rust.override.toml"]
+"""The module of the two override files. It reruns only when one of them
+changed, and it moves only their tools: each machine tool's own module
+moves that tool."""
+import json
+import os
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+ENVS = ("flow-java", "flow-rust")
+
+folder = Path(os.environ["MISE_CONFIG_ROOT"])
+requests = {tool: request for env in ENVS
+            for tool, request in tomllib.loads((folder / f"{env}.override.toml").read_text())["tools"].items()}
+# Under every flow env, so mise reads the override files.
+mise = ["mise", "-E", ",".join(ENVS)]
+installed = json.loads(subprocess.run([*mise, "ls", "--installed", "--json"], capture_output=True,
+                                      text=True, check=True).stdout)
+# A lazy tool installs on its first use, never at sync: named, upgrade would
+# install it now, and cargo-modules builds with the project's cargo. Once
+# installed, it moves like the others.
+moving = [tool for tool, request in requests.items()
+          if not (isinstance(request, dict) and request.get("lazy")) or tool in installed]
+# The same three steps as flow:sync:lefthook.
+for command in ([*mise, "lock", "--global", "--platform", os.environ["FLOW_LOCK_PLATFORM"], *requests],
+                [*mise, "upgrade", "--global", *moving],
+                [*mise, "install", *moving]):
+    if subprocess.run(command).returncode != 0:
+        sys.exit(1)

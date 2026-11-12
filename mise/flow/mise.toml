@@ -1,23 +1,22 @@
 # flow's mise setup. /flow:sync links this folder as ~/.config/mise/conf.d/flow,
 # so mise loads it as global config in every directory. Each version line
 # names a major (the minor for a 0.x tool); the exact versions live in
-# mise's global lock, which `mise run flow:sync` moves to the newest release
-# inside each major.
+# mise's global lock, which each flow:sync:<tool> module moves to the newest
+# release inside its major.
 min_version = "2026.11.5"
 
 [settings]
-# mise holds back releases younger than 24 hours. The owner's own tools,
-# released from ttran-labs, skip that hold; every other tool keeps it. An
-# entry is a full tool ID: mise matches no owner wildcard.
-minimum_release_age_excludes = ["github:ttran-labs/neurons"]
+# A module is stale when its sources' content changed, not their times: a
+# plugin update copies every file, and the modules with the same content
+# still skip.
+task.source_freshness_hash_contents = true
 
-# Machine tools: git runs lefthook, Claude Code runs neuron-mcp, hooks run
-# gitleaks. The lint and coverage tools are in the flow-<language> override
-# files instead, which load only under `mise -E flow-<language>`.
+# Each machine tool has its own folder in ../tools, with its tool line and its
+# module. gitleaks stays here until flow decides how a machine runs it. The
+# lint and coverage tools are in the flow-<language> override files instead,
+# which load only under `mise -E flow-<language>`.
 [tools]
-lefthook = "2"
 gitleaks = "8"
-"github:ttran-labs/neurons" = { version = "2", version_prefix = "neurons--v" }
 
 # flow's payload. A relative source resolves through the conf.d link, so
 # ../../ is the plugin root.
@@ -40,6 +39,14 @@ root = "~/.config/mise/conf.d/flow/../../bundled-skills"
 target = "~/.claude/skills"
 mode = "copy"
 
+# One link per file of each tool folder, under ~/.config/mise/conf.d/, so mise
+# loads each folder as its own config. A group, so --prune removes the folder
+# of a tool flow dropped.
+[dotfile_groups.flow-tools]
+root = "~/.config/mise/conf.d/flow/../tools"
+target = "~/.config/mise/conf.d"
+mode = "symlink-each"
+
 [task_config]
 # lefthook starts each job in the repository root; without this, flow's
 # tasks would run in this folder.
@@ -49,19 +56,14 @@ dir = "{{ cwd }}"
 includes = ["tasks"]
 
 [tasks."flow:sync"]
-description = "Install flow's payload, move every tool to the newest release inside its major, and register the neurons MCP server"
+description = "Run every flow:sync:<tool> module whose files changed, and move gitleaks to the newest release inside its major"
 hide = true
 dir = "{{ env.HOME }}"
+lock = "mise-global-lockfile"
+depends = ["flow:sync:*"]
 run = [
-  "mise dot apply --prune --yes",
-  # Every flow env, so the override files' tools keep their lock entries.
-  # mise starts a lockfile only from `mise lock`; upgrade and install update
-  # one. This machine's platform only: a new lock otherwise checks every
-  # tool's provenance for seven platforms, and one failed check fails sync.
-  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }}",
-  "mise -E flow-java,flow-rust upgrade --global",
-  # Installs what upgrade left out and moves mise's installs/<tool>/global links.
-  "mise -E flow-java,flow-rust install",
-  # The global link follows every neurons bump, so this registers once.
-  'claude mcp get neurons >/dev/null 2>&1 || claude mcp add -s user neurons -- "$HOME/.local/share/mise/installs/github-ttran-labs-neurons/global/neuron-mcp"',
+  # The same three steps as flow:sync:lefthook.
+  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} gitleaks",
+  "mise -E flow-java,flow-rust upgrade --global gitleaks",
+  "mise -E flow-java,flow-rust install gitleaks",
 ]

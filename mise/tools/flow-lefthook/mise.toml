@@ -1,0 +1,26 @@
+# lefthook, which git runs for flow's checks. /flow:sync links this folder as
+# ~/.config/mise/conf.d/flow-lefthook, so mise loads it as its own global
+# config, and its module reruns only when a file in it changed.
+[tools]
+lefthook = "2"
+
+[tasks."flow:sync:lefthook"]
+description = "Move lefthook to the newest release inside its major"
+hide = true
+dir = "{{ env.HOME }}"
+# mise fails an install when another process changes the global lockfile
+# meanwhile, so every task that writes it takes this task lock: the modules
+# run one at a time, also across two syncs at once.
+lock = "mise-global-lockfile"
+sources = ["{{ config_root }}/**"]
+run = [
+  # Every flow env on each step: without it, mise drops the override files'
+  # tools from the lock. mise starts a lockfile only from `mise lock`;
+  # upgrade and install update one. This machine's platform only: a new lock
+  # otherwise checks the tool's provenance for seven platforms, and one
+  # failed check fails sync.
+  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} lefthook",
+  "mise -E flow-java,flow-rust upgrade --global lefthook",
+  # Installs what upgrade left out and moves mise's installs/lefthook/global link.
+  "mise -E flow-java,flow-rust install lefthook",
+]

@@ -15,12 +15,20 @@ tied to one machine.
 - `commands/`: the `/flow:sync` and `/flow:setup-hooks` commands.
 - `mise/flow/`: flow's mise setup. It says which files `/flow:sync` copies
   into `~/.claude` and which tools flow installs, each at the newest release
-  inside a major. It also holds flow's tasks and the lefthook job file for
-  each language.
-- `hooks/` and `scripts/`: one hook adds `flow-reminder.md` to every prompt.
-  The others check each `git commit` Claude runs: no AI attribution in the
-  message, no ticket work on `main`, and a thinking graph written in the
-  last two hours.
+  inside a major. It also holds flow's tasks, the commit guards among them,
+  and the lefthook job file for each language.
+- Next to `mise/flow/`, a folder for each machine tool but gitleaks, with
+  its tool line and its `flow:sync:<tool>` module. `/flow:sync` links each
+  folder into `~/.config/mise/conf.d/`, where mise loads it as its own
+  config. gitleaks' tool line sits in `mise/flow/` itself.
+- `hooks/`: one hook adds `flow-reminder.md` to every prompt. The others
+  start the guards, `mise -C ~ run flow:guard-commit` and
+  `flow:guard-neurons`, on each Bash command Claude runs. They check each
+  `git commit`: no AI attribution in the message, no ticket work on `main`,
+  and a thinking graph written in the last two hours. They start from the
+  home folder, so mise never trusts the project Claude works in. Without
+  mise or flow's tasks they block nothing and print one line: run
+  `/flow:sync`.
 - `flow-reminder.md`: the short reminder that hook adds.
 
 ## Install
@@ -59,16 +67,21 @@ bundled skills into `~/.claude`, removing a rule or skill flow dropped and
 keeping your own. Don't skip it: plugin hooks only reach the main session,
 and subagents only see the rules through those copied files. Your own
 `~/.config/mise/config.toml` is never edited. If you pick dotfile groups with
-mise's `[bootstrap] dotfile_groups`, list `flow-rules` and `flow-skills`
-there too, or the next sync removes flow's rules and skills from `~/.claude`.
+mise's `[bootstrap] dotfile_groups`, list `flow-rules`, `flow-skills` and
+`flow-tools` there too, or the next sync removes flow's rules and skills from
+`~/.claude` and its tool folders from `~/.config/mise/conf.d`.
 
 mise also installs the tools flow uses: lefthook, gitleaks, and neurons, the
 MCP server behind the thinking graph the rules ask for, from its public
 release. Releases ship for Apple Silicon macOS and x86_64 Linux. Each tool
-names a major in flow's folder; the exact versions are in mise's global
-lock, which `mise run flow:sync` writes and every sync moves to the newest
-release inside that major. The lint tools load only in flow's own hook tasks, so your
-shell and your builds keep their own versions.
+names a major in flow's mise folders; the exact versions are in mise's global
+lock, which `mise run flow:sync` writes. Each tool but gitleaks has a module
+that reruns only when its own files changed, and then moves that tool to the
+newest release inside its major; a sync with nothing changed skips them all.
+gitleaks has no module yet and moves on every sync. `mise run --force
+flow:sync` moves every tool now. The lint tools load only
+in flow's own hook tasks, so your shell and your builds keep their own
+versions.
 
 Sync keeps every machine on the Claude Code version flow pins. When yours
 differs, it prints the install command for that version; it never runs the

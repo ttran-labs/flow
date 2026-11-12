@@ -1,0 +1,27 @@
+# neurons, the MCP server behind the thinking graph. /flow:sync links this
+# folder as ~/.config/mise/conf.d/flow-neurons, so mise loads it as its own
+# global config, and its module reruns only when a file in it changed.
+
+[settings]
+# mise holds back releases younger than 24 hours. The owner's own tools,
+# released from ttran-labs, skip that hold; every other tool keeps it. An
+# entry is a full tool ID: mise matches no owner wildcard.
+minimum_release_age_excludes = ["github:ttran-labs/neurons"]
+
+[tools]
+"github:ttran-labs/neurons" = { version = "2", version_prefix = "neurons--v" }
+
+[tasks."flow:sync:neurons"]
+description = "Move neurons to the newest release inside its major and register its MCP server"
+hide = true
+dir = "{{ env.HOME }}"
+lock = "mise-global-lockfile"
+sources = ["{{ config_root }}/**"]
+run = [
+  # The same three steps as flow:sync:lefthook.
+  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} github:ttran-labs/neurons",
+  "mise -E flow-java,flow-rust upgrade --global github:ttran-labs/neurons",
+  "mise -E flow-java,flow-rust install github:ttran-labs/neurons",
+  # The global link follows every neurons bump, so this registers once.
+  'claude mcp get neurons >/dev/null 2>&1 || claude mcp add -s user neurons -- "$HOME/.local/share/mise/installs/github-ttran-labs-neurons/global/neuron-mcp"',
+]

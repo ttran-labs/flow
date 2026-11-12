@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
+#MISE description="Block a git commit Claude runs when no neurons graph was written in 2 hours"
+#MISE hide=true
+#MISE quiet=true
+#MISE tools={python="3"}
 """PreToolUse guard: blocks git commit if no neurons graph was touched.
 
 Checks the newest neurons db modified time. If no db was written in the
 last 2 hours, the commit is blocked with guidance. A machine without neurons
 (no graph db, and no neuron-mcp on PATH, from mise or in ~/.cargo/bin) is not
 checked.
-Only fires on git commit commands (same pattern as guard-commit.py).
+Only fires on commands that contain "git commit".
 """
 import json
 import os
