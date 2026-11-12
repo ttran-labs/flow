@@ -1,13 +1,10 @@
-# The Java lint tools. Linked as ~/.config/mise/config.flow-java.override.toml,
-# they load only under `mise -E flow-java`: there they run at the locked
-# version and beat the project's own mise config and [env]; nowhere else do
-# they reach a shell, `mise exec` or a build.
+# The Java runtime flow's Java tools run on. Linked as
+# ~/.config/mise/config.flow-java.override.toml, it loads only under
+# `mise -E flow-java`: there it beats the project's own Java and [env], which
+# only an override file does; nowhere else does it reach a shell, `mise exec`
+# or a build. Each Java lint tool has its own folder in ../tools instead.
 [tools]
 java = "temurin-21"
-checkstyle = "14"
-"github:pmd/pmd" = { version = "7", asset_pattern = "pmd-dist-*-bin.zip", version_prefix = "pmd_releases/" }
-jbang = "0.143"
-maven = "3"
 python = "3"
 
 [env]

@@ -1,0 +1,22 @@
+#!/bin/sh
+#MISE description="Seed the neurons db of the session in FLOW_SESSION_DIR, and land each neurons update on it"
+#MISE hide=true
+#MISE dir="{{ env.HOME }}"
+#MISE skip_if='test -z "$FLOW_PROJECT_DIR"'
+#MISE sources=["{{ env.MISE_DATA_DIR | default(value=env.HOME ~ '/.local/share/mise') }}/installs/github-ttran-labs-neurons/global/neuron"]
+#MISE outputs=["{{ env.FLOW_PROJECT_DIR | default(value='') }}/.config/flow/neurons-{% if env.FLOW_SESSION_DIR %}{{ env.FLOW_SESSION_DIR | split(pat='/') | last }}{% else %}{{ env.FLOW_PROJECT_DIR | default(value='') | split(pat='/') | last }}{% endif %}.stamp"]
+# The installed neuron is a source, so a neurons upgrade reruns this module in
+# each project. neuron names a db after the folder it runs in, as the MCP
+# server does after the folder a session starts in, so it runs in
+# FLOW_SESSION_DIR, the project's own folder when that is unset. Its stamp,
+# named after that folder, sits with the project's other stamps. As in
+# flow:setup:hooks, the outputs template needs a default and the module skips
+# without the project.
+set -e
+session=${FLOW_SESSION_DIR:-$FLOW_PROJECT_DIR}
+cd "$session"
+# --update seeds a missing db as seed does, and revises an existing one to the
+# installed release.
+neuron seed --update
+mkdir -p "$FLOW_PROJECT_DIR/.config/flow"
+touch "$FLOW_PROJECT_DIR/.config/flow/neurons-$(basename "$session").stamp"

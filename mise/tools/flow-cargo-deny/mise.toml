@@ -1,0 +1,17 @@
+# cargo-deny, flow's Rust dependency check.
+# /flow:sync links this folder as ~/.config/mise/conf.d/flow-cargo-deny;
+# its tool line, in mise.flow-rust.toml, loads only under `mise -E flow-rust`.
+[tasks."flow:setup:cargo-deny"]
+description = "In a Rust project, move cargo-deny to the newest release inside its major"
+hide = true
+dir = "{{ env.HOME }}"
+lock = "mise-global-lockfile"
+# As flow:setup:checkstyle's, for Rust's build file.
+skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
+sources = ["{{ config_root }}/**"]
+run = [
+  # The same three steps as flow:sync:lefthook.
+  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} cargo-deny",
+  "mise -E flow-java,flow-rust upgrade --global cargo-deny",
+  "mise -E flow-java,flow-rust install cargo-deny",
+]

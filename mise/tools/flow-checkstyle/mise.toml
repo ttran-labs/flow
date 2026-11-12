@@ -1,0 +1,20 @@
+# Checkstyle, flow's Java style check.
+# /flow:sync links this folder as ~/.config/mise/conf.d/flow-checkstyle;
+# its tool line, in mise.flow-java.toml, loads only under `mise -E flow-java`.
+[tasks."flow:setup:checkstyle"]
+description = "In a Java project, move checkstyle to the newest release inside its major"
+hide = true
+dir = "{{ env.HOME }}"
+lock = "mise-global-lockfile"
+# Only in a Java project, the one the SessionStart hook names in
+# FLOW_PROJECT_DIR. The task itself runs from the home folder, so mise never
+# loads that project's own config. `test -f`, never `ls`: ls fails when any
+# one of the files is missing.
+skip_if = 'test ! -f "$FLOW_PROJECT_DIR/pom.xml" -a ! -f "$FLOW_PROJECT_DIR/build.gradle" -a ! -f "$FLOW_PROJECT_DIR/build.gradle.kts"'
+sources = ["{{ config_root }}/**"]
+run = [
+  # The same three steps as flow:sync:lefthook.
+  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} checkstyle",
+  "mise -E flow-java,flow-rust upgrade --global checkstyle",
+  "mise -E flow-java,flow-rust install checkstyle",
+]

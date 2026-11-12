@@ -1,0 +1,2 @@
+[tools]
+"github:pmd/pmd" = { version = "7", asset_pattern = "pmd-dist-*-bin.zip", version_prefix = "pmd_releases/" }

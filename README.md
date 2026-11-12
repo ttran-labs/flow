@@ -17,12 +17,15 @@ tied to one machine.
   into `~/.claude` and which tools flow installs, each at the newest release
   inside a major. It also holds flow's tasks, the commit guards among them,
   and the lefthook job file for each language.
-- Next to `mise/flow/`, a folder for each machine tool but gitleaks, with
-  its tool line and its `flow:sync:<tool>` module. `/flow:sync` links each
-  folder into `~/.config/mise/conf.d/`, where mise loads it as its own
-  config. gitleaks' tool line sits in `mise/flow/` itself.
-- `hooks/`: one hook adds `flow-reminder.md` to every prompt. The others
-  start the guards, `mise -C ~ run flow:guard-commit` and
+- Next to `mise/flow/`, a folder for each tool but gitleaks, with its tool
+  line and its module: `flow:sync:<tool>` for a machine tool,
+  `flow:setup:<tool>` for a lint or coverage tool, whose line loads only
+  under `mise -E flow-<language>`. `/flow:sync` links each folder into
+  `~/.config/mise/conf.d/`, where mise loads it as its own config. gitleaks'
+  tool line sits in `mise/flow/` itself.
+- `hooks/`: one hook adds `flow-reminder.md` to every prompt. One sets up the
+  project each session starts in, in the background (see Projects below).
+  The others start the guards, `mise -C ~ run flow:guard-commit` and
   `flow:guard-neurons`, on each Bash command Claude runs. They check each
   `git commit`: no AI attribution in the message, no ticket work on `main`,
   and a thinking graph written in the last two hours. They start from the
@@ -79,13 +82,42 @@ lock, which `mise run flow:sync` writes. Each tool but gitleaks has a module
 that reruns only when its own files changed, and then moves that tool to the
 newest release inside its major; a sync with nothing changed skips them all.
 gitleaks has no module yet and moves on every sync. `mise run --force
-flow:sync` moves every tool now. Every session runs the neurons mise
+flow:sync` moves every machine tool now; the lint tools move at session
+start, in a project of their language. Every session runs the neurons mise
 installed: sync registers its MCP server at mise's global link, switches a
 user-scope registration that runs another build, removes the local-scope ones
 that do, and deletes the `neuron` and `neuron-mcp` that flow's old installer
 put in `~/.cargo/bin`. The lint tools load only
 in flow's own hook tasks, so your shell and your builds keep their own
 versions.
+
+## Projects
+
+Every session sets up the project it starts in, with nothing typed: the
+repo's top level when the session starts inside a git repo. The SessionStart
+hook runs `mise -C ~ run flow:session-start`, which runs `flow:setup` with
+`FLOW_PROJECT_DIR` naming the project, from the home folder, so mise never
+loads the project's own config. Each module skips what is already done:
+
+- each lint and coverage tool's module runs only in a project of its
+  language, one with `pom.xml`, `build.gradle` or `build.gradle.kts` for
+  Java, `Cargo.toml` for Rust, and moves that tool to the newest release
+  inside its major. mise keeps its exact version in the global lock of that
+  language's env, `~/.config/mise/mise.flow-java.lock` or
+  `mise.flow-rust.lock`. Java 21, which flow's Java tools run on, comes
+  from the flow-java override file, so it beats the project's own Java;
+- the hooks module runs `flow:setup-hooks` in a git repo, once per repo and
+  per worktree;
+- the neurons module seeds the neurons db of the folder the session starts
+  in, the one its MCP server opens, and lands each neurons release on it.
+
+A module that ran prints `sources up-to-date, skipping` on the next session,
+and reruns only when its own files changed or, for the neurons module, when
+neurons moved. The hook runs in the background, so a session never waits for
+it, also not on a first setup that downloads tools. A commit made before that
+first setup ends runs without flow's hooks. A module that fails prints one
+line, which Claude passes on, and so does a machine without mise: run
+`/flow:sync`.
 
 Sync keeps every machine on the Claude Code version flow pins. When yours
 differs, it prints the install command for that version; it never runs the
@@ -109,9 +141,10 @@ runs those checks, also from a GUI git client like IntelliJ. It adds the
 files it writes to git's global ignore file, so `git status` stays clean.
 
 A new worktree needs it too: the local config is ignored, so `git worktree
-add` leaves it out, and a commit there runs no checks until you run
-`mise run flow:setup-hooks` in the worktree. The git-convention skill does
-that for every ticket worktree.
+add` leaves it out, and a commit there runs no checks until it is set up.
+The first session in the worktree does that, and so does
+`mise run flow:setup-hooks` in it, which the git-convention skill runs for
+every ticket worktree.
 
 ## Update
 

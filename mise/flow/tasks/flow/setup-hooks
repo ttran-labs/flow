@@ -2,13 +2,14 @@
 #MISE description="Point this repo's git hooks at flow's checks for the languages it builds"
 #MISE hide=true
 #MISE tools={python="3"}
-"""Gives the repo it runs in flow's checks. It finds the languages from the
-build files at the repo root and writes .config/lefthook-local.yml, which
-extends flow's job file for each of those languages, keeps that file and the
-hidden .config/flow folder out of git through the global ignore file, and
-installs the hooks. The repo's own lefthook config stays as it is; lefthook
-merges the two. A local config the owner wrote is never changed: the lines
-to add are printed instead, in that file's format."""
+"""Gives the repo it runs in, or the one FLOW_PROJECT_DIR names when the
+session start sets the project up, flow's checks. It finds the languages
+from the build files at the repo root and writes .config/lefthook-local.yml,
+which extends flow's job file for each of those languages, keeps that file
+and the hidden .config/flow folder out of git through the global ignore
+file, and installs the hooks. The repo's own lefthook config stays as it is;
+lefthook merges the two. A local config the owner wrote is never changed:
+the lines to add are printed instead, in that file's format."""
 import itertools
 import json
 import os
@@ -43,8 +44,11 @@ JOB_FILE_MISSING = "{} is missing, so flow's checks can't run: run /flow:sync, t
 
 def find_global_lefthook(mise):
     """mise's global link to lefthook. mise moves it on every lefthook bump,
-    so hooks that call it keep working after one."""
-    doctor = subprocess.run([mise, "doctor", "--json"], capture_output=True, text=True)
+    so hooks that call it keep working after one. Asked from the home
+    folder: in the repo, mise refuses a mise config there that is not
+    trusted."""
+    doctor = subprocess.run([mise, "-C", str(Path.home()), "doctor", "--json"], capture_output=True,
+                            text=True)
     data_dir = Path(json.loads(doctor.stdout)["dirs"]["data"])
     return data_dir / "installs/lefthook/global/lefthook"
 
@@ -174,7 +178,7 @@ def install_hooks(lefthook, config_text):
 
 def main():
     repo_root = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE,
-                               text=True)
+                               text=True, cwd=os.environ.get("FLOW_PROJECT_DIR"))
     if repo_root.returncode != 0:
         sys.exit(NOT_A_REPO)
 

@@ -1,0 +1,17 @@
+# PMD, flow's Java rule check.
+# /flow:sync links this folder as ~/.config/mise/conf.d/flow-pmd;
+# its tool line, in mise.flow-java.toml, loads only under `mise -E flow-java`.
+[tasks."flow:setup:pmd"]
+description = "In a Java project, move PMD to the newest release inside its major"
+hide = true
+dir = "{{ env.HOME }}"
+lock = "mise-global-lockfile"
+# As flow:setup:checkstyle's.
+skip_if = 'test ! -f "$FLOW_PROJECT_DIR/pom.xml" -a ! -f "$FLOW_PROJECT_DIR/build.gradle" -a ! -f "$FLOW_PROJECT_DIR/build.gradle.kts"'
+sources = ["{{ config_root }}/**"]
+run = [
+  # The same three steps as flow:sync:lefthook.
+  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} github:pmd/pmd",
+  "mise -E flow-java,flow-rust upgrade --global github:pmd/pmd",
+  "mise -E flow-java,flow-rust install github:pmd/pmd",
+]

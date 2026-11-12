@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v mise >/dev/null 2>&1 && [ -f ~/.config/mise/conf.d/flow/tasks/flow/session-start ] || { echo '{\"systemMessage\": \"Tell the owner: flow did not set up this project, because mise or its flow tasks are missing. Run /flow:sync.\"}'; exit 0; }; mise -C ~ run flow:session-start || echo '{\"systemMessage\": \"Tell the owner: flow could not set up this project: mise -C ~ run flow:session-start failed. To see why, run FLOW_PROJECT_DIR=$PWD mise -C ~ run flow:setup in it.\"}'",
+            "async": true
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [

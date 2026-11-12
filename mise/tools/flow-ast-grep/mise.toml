@@ -1,0 +1,17 @@
+# ast-grep, flow's structural Rust check.
+# /flow:sync links this folder as ~/.config/mise/conf.d/flow-ast-grep;
+# its tool line, in mise.flow-rust.toml, loads only under `mise -E flow-rust`.
+[tasks."flow:setup:ast-grep"]
+description = "In a Rust project, move ast-grep to the newest release inside its major"
+hide = true
+dir = "{{ env.HOME }}"
+lock = "mise-global-lockfile"
+# As flow:setup:checkstyle's, for Rust's build file.
+skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
+sources = ["{{ config_root }}/**"]
+run = [
+  # The same three steps as flow:sync:lefthook.
+  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} ast-grep",
+  "mise -E flow-java,flow-rust upgrade --global ast-grep",
+  "mise -E flow-java,flow-rust install ast-grep",
+]

@@ -1,0 +1,4 @@
+[tools]
+# 0.51.0 has GHSA-fj5f-4qw6-hhpg, fixed in 0.51.1; the module moves the lock to
+# the newest 0.51 release, so it never stays on 0.51.0.
+ast-grep = "0.51"

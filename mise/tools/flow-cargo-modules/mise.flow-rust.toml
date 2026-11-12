@@ -1,0 +1,2 @@
+[tools]
+"cargo:cargo-modules" = { version = "0.28", lazy = true, lazy_bins = ["cargo-modules"] }

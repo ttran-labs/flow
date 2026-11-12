@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+#MISE description="Set up the project a session starts in through flow:setup, and pass on what the owner must hear"
+#MISE hide=true
+#MISE quiet=true
+#MISE tools={python="3"}
+"""SessionStart hook: hooks.json starts it async from the home folder, so the
+session's folder comes from the hook input's cwd, and the session never waits
+on it. What it prints reaches Claude on the next turn, so each line asks
+Claude to pass it on. It exits 0; when mise cannot start it at all, hooks.json
+prints its own line naming flow:session-start."""
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+MODULE_LINE = re.compile(r"^\[(flow:setup:[a-z-]+)\] (Tell the owner: .*)$")
+FAILED_MODULE = re.compile(r"^\[(flow:setup:[a-z-]+)\] exited with status")
+FAILED_MODULE_LINE = ("Tell the owner: flow could not set up this project: {module} failed. To see why, "
+                      "run FLOW_PROJECT_DIR=$PWD mise -C ~ run {module} in it.")
+FAILED_BEFORE_MODULES = ("Tell the owner: flow could not set up this project: mise -C ~ run flow:setup "
+                         "failed before its modules ran. To see why, run FLOW_PROJECT_DIR=$PWD mise -C ~ "
+                         "run flow:setup in it.")
+
+
+def read_session_folder(hook_input):
+    """The folder the session starts in. The shell Claude Code starts the
+    hook in is that folder too, so it stands in for a cwd the input lacks."""
+    try:
+        session = json.loads(hook_input).get("cwd")
+    except (json.JSONDecodeError, AttributeError):
+        session = None
+
+    return session if isinstance(session, str) and Path(session).is_dir() else os.environ["PWD"]
+
+
+def find_project(session):
+    """The repo's top level for a session inside a git repo, as setup-hooks
+    sets the repo up, where git's ignore line keeps the stamps out; the
+    session folder otherwise, also on a machine without git."""
+    try:
+        top_level = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=session,
+                                   capture_output=True, text=True)
+    except FileNotFoundError:
+        return session
+
+    return top_level.stdout.strip() if top_level.returncode == 0 else session
+
+
+def main():
+    session = read_session_folder(sys.stdin.read())
+    # From the home folder, so mise never loads the project's own config.
+    # neurons still seeds the session folder's db, the one the session's MCP
+    # server opens. Prefix output, which the lines below are read from,
+    # whatever the jobs setting.
+    setup = subprocess.run(["mise", "run", "--output", "prefix", "--continue-on-error", "flow:setup"],
+                           cwd=Path.home(), env={**os.environ, "FLOW_PROJECT_DIR": find_project(session),
+                                                 "FLOW_SESSION_DIR": session},
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    lines, has_failed_module = [], False
+    for line in setup.stdout.splitlines():
+        if module_line := MODULE_LINE.match(line):
+            lines.append(module_line.group(2))
+        elif failed_module := FAILED_MODULE.match(line):
+            has_failed_module = True
+            lines.append(FAILED_MODULE_LINE.format(module=failed_module.group(1)))
+
+    if setup.returncode != 0 and not has_failed_module:
+        lines.append(FAILED_BEFORE_MODULES)
+
+    if lines:
+        print(json.dumps({"systemMessage": "\n".join(lines)}))
+
+
+if __name__ == "__main__":
+    main()

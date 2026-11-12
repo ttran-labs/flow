@@ -1,0 +1,24 @@
+#!/bin/sh
+#MISE description="Give the git repo in FLOW_PROJECT_DIR flow's checks through flow:setup-hooks, again only when that task changed"
+#MISE hide=true
+#MISE dir="{{ env.HOME }}"
+#MISE skip_if='test -z "$FLOW_PROJECT_DIR" || ! git -C "$FLOW_PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1'
+#MISE sources=["{{ config_root }}/tasks/flow/setup-hooks"]
+#MISE outputs=["{{ env.FLOW_PROJECT_DIR | default(value='') }}/.config/flow/hooks.stamp"]
+# Every mise run renders the outputs template, so FLOW_PROJECT_DIR has a
+# default there; without it the module skips. The stamp sits in the project,
+# so each repo and each worktree is set up once, and a new worktree, which git
+# gives no ignored files, is set up again.
+set -e
+output=$(mise run flow:setup-hooks 2>&1) || { printf '%s\n' "$output"; exit 1; }
+
+# A lefthook-local config the owner wrote stays as it is, and setup-hooks
+# prints the lines to add instead. The session's hook passes this line on
+# once; the stamp keeps the next session quiet.
+case "$output" in
+  *"already exists, so it stays as it is."*)
+    echo "Tell the owner: this repo has a lefthook-local config of its own, so flow's checks are not in it yet. To see the lines to add, run FLOW_PROJECT_DIR=\$PWD mise -C ~ run flow:setup-hooks in it." ;;
+esac
+
+mkdir -p "$FLOW_PROJECT_DIR/.config/flow"
+touch "$FLOW_PROJECT_DIR/.config/flow/hooks.stamp"

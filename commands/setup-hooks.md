@@ -20,6 +20,6 @@ Set up flow's checks in the repo the user is working in.
    missing and how to fix it.
 4. Tell the user that every worktree needs this too: the local config is
    ignored, so `git worktree add` leaves it out, and a commit in a worktree
-   without it runs no checks. The git-convention skill runs it in every new
-   ticket worktree. Running it again in a repo gives the same file and
+   without it runs no checks. The first session in a worktree runs it, and
+   the git-convention skill runs it in every new ticket worktree. Running it again in a repo gives the same file and
    installs any hooks a newer flow added.

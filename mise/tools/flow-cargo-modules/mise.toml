@@ -1,0 +1,19 @@
+# cargo-modules, flow's Rust module structure check.
+# /flow:sync links this folder as ~/.config/mise/conf.d/flow-cargo-modules;
+# its tool line, in mise.flow-rust.toml, loads only under `mise -E flow-rust`.
+[tasks."flow:setup:cargo-modules"]
+description = "In a Rust project, move cargo-modules to the newest release inside its major"
+hide = true
+dir = "{{ env.HOME }}"
+lock = "mise-global-lockfile"
+# As flow:setup:checkstyle's, for Rust's build file.
+skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
+sources = ["{{ config_root }}/**"]
+run = [
+  # The same three steps as flow:sync:lefthook.
+  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} cargo:cargo-modules",
+  # cargo-modules builds from source with the project's cargo, so its first
+  # use installs it, never this module: named, upgrade would install it now.
+  # Once installed, it moves like the others.
+  '[ -z "$(mise -E flow-java,flow-rust ls --installed cargo:cargo-modules)" ] || { mise -E flow-java,flow-rust upgrade --global cargo:cargo-modules && mise -E flow-java,flow-rust install cargo:cargo-modules; }',
+]

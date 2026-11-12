@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+#MISE description="In a Java project, move the flow-java override file's Java runtime to the newest release inside each major"
+#MISE hide=true
+#MISE dir="{{ env.HOME }}"
+#MISE lock="mise-global-lockfile"
+#MISE tools={python="3"}
+#MISE env={FLOW_LOCK_PLATFORM="{{ os() }}-{{ arch() }}"}
+#MISE skip_if='test ! -f "$FLOW_PROJECT_DIR/pom.xml" -a ! -f "$FLOW_PROJECT_DIR/build.gradle" -a ! -f "$FLOW_PROJECT_DIR/build.gradle.kts"'
+#MISE sources=["{{ config_root }}/flow-java.override.toml"]
+"""The module of the flow-java override file: the Java runtime stays there,
+since only an override file beats a project's own Java. It reruns only when
+that file changed, and only in a Java project, as each Java tool's module."""
+import os
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+override_file = Path(os.environ["MISE_CONFIG_ROOT"]) / "flow-java.override.toml"
+tools = list(tomllib.loads(override_file.read_text())["tools"])
+mise_command = ["mise", "-E", "flow-java,flow-rust"]
+# The same three steps as flow:sync:lefthook.
+for command in ([*mise_command, "lock", "--global", "--platform", os.environ["FLOW_LOCK_PLATFORM"], *tools],
+                [*mise_command, "upgrade", "--global", *tools],
+                [*mise_command, "install", *tools]):
+    if subprocess.run(command).returncode != 0:
+        sys.exit(1)

@@ -20,19 +20,21 @@ installing: flow's mise folder in the plugin says which files go into
 4. Run `mise -C ~ dot apply --prune --yes`. From the home folder, so only
    the global config's files apply, never the project's. It copies
    CLAUDE.md, the rules and the bundled skills into ~/.claude, removes a
-   rule or skill flow dropped and keeps the user's own, links the lint
-   tools' env files, and links each tool folder flow ships into
+   rule or skill flow dropped and keeps the user's own, links the Java
+   runtime's env file, and links each tool folder flow ships into
    ~/.config/mise/conf.d/, removing the folder of a tool flow dropped.
-5. Run `mise run flow:sync` and pass its output on. Each tool but gitleaks
-   has a module, which reruns only when its folder changed: it moves that
-   tool to the newest release inside its major. The neurons registration
+5. Run `mise run flow:sync` and pass its output on. Each machine tool but
+   gitleaks has a module, which reruns only when its folder changed: it
+   moves that tool to the newest release inside its major. The lint tools
+   are not installed here: each session sets up the project it starts in
+   with that project's languages' tools. The neurons registration
    module also reruns when Claude Code's registrations changed: it registers
    the neurons MCP server at mise's global link, switches a user-scope one
    that runs another build, removes the local-scope ones that do, and
    removes the `neuron` and `neuron-mcp` that flow's old installer put in
    `~/.cargo/bin`. A module with nothing changed prints
    `sources up-to-date, skipping`. gitleaks has no
-   module yet and moves on every sync. To move every tool to the
+   module yet and moves on every sync. To move every machine tool to the
    newest release inside its major, the user runs
    `mise run --force flow:sync`. If the command is refused, tell the user to
    run `! mise run flow:sync`. A non-zero exit is a failed sync: report its

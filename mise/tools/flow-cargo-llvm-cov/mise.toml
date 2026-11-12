@@ -1,0 +1,17 @@
+# cargo-llvm-cov, flow's Rust coverage.
+# /flow:sync links this folder as ~/.config/mise/conf.d/flow-cargo-llvm-cov;
+# its tool line, in mise.flow-rust.toml, loads only under `mise -E flow-rust`.
+[tasks."flow:setup:cargo-llvm-cov"]
+description = "In a Rust project, move cargo-llvm-cov to the newest release inside its major"
+hide = true
+dir = "{{ env.HOME }}"
+lock = "mise-global-lockfile"
+# As flow:setup:checkstyle's, for Rust's build file.
+skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
+sources = ["{{ config_root }}/**"]
+run = [
+  # The same three steps as flow:sync:lefthook.
+  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} github:taiki-e/cargo-llvm-cov",
+  "mise -E flow-java,flow-rust upgrade --global github:taiki-e/cargo-llvm-cov",
+  "mise -E flow-java,flow-rust install github:taiki-e/cargo-llvm-cov",
+]

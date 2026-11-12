@@ -11,10 +11,10 @@ min_version = "2026.11.5"
 # still skip.
 task.source_freshness_hash_contents = true
 
-# Each machine tool has its own folder in ../tools, with its tool line and its
-# module. gitleaks stays here until flow decides how a machine runs it. The
-# lint and coverage tools are in the flow-<language> override files instead,
-# which load only under `mise -E flow-<language>`.
+# Each tool has its own folder in ../tools, with its tool line and its
+# module: a machine tool's flow:sync:<tool>, a lint or coverage tool's
+# flow:setup:<tool>, whose tool line loads only under `mise -E flow-<language>`.
+# gitleaks stays here until flow decides how a machine runs it.
 [tools]
 gitleaks = "8"
 
@@ -23,7 +23,6 @@ gitleaks = "8"
 [dotfiles]
 "~/.claude/CLAUDE.md" = { source = "../../CLAUDE.md", mode = "copy" }
 "~/.config/mise/config.flow-java.override.toml" = { source = "flow-java.override.toml", mode = "symlink" }
-"~/.config/mise/config.flow-rust.override.toml" = { source = "flow-rust.override.toml", mode = "symlink" }
 
 # Groups, not plain copies: a group records what it wrote, so
 # `mise dot apply --prune` removes a rule or skill flow dropped and leaves the
@@ -67,3 +66,9 @@ run = [
   "mise -E flow-java,flow-rust upgrade --global gitleaks",
   "mise -E flow-java,flow-rust install gitleaks",
 ]
+
+[tasks."flow:setup"]
+description = "Set up the project in FLOW_PROJECT_DIR: its languages' tools and its hooks, and the neurons db of the session in FLOW_SESSION_DIR, each module skipped when unchanged"
+hide = true
+dir = "{{ env.HOME }}"
+depends = ["flow:setup:*"]
