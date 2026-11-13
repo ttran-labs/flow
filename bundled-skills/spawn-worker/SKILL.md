@@ -24,6 +24,8 @@ Write the brief to a file in the scratchpad. It carries:
 - only the decisions the ticket does not spell out;
 - the ticket's gate;
 - the worktree and branch, named by the git-convention skill;
+- "the hooks run the tests: lint, then unit, at commit and integration at
+  push; e2e runs on the PR, never locally";
 - "neurons tools may be locked by the main session: skip them and say so";
 - the stop-and-report conditions: a step would delete files outside the
   worktree, or needs a decision the ticket and the brief do not cover;

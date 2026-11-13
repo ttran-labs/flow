@@ -66,5 +66,5 @@ the QA.
   types downstream code bakes in) are not. Adversarial,
   tested-before-implementation scrutiny goes to what structures mean first,
   data contents second.
-- No hook checks the suite, coverage or the gate: the agent runs them itself
-  before every commit and PR, and the owner reads every PR.
+- The hooks decide what runs: the lint, then the unit tests, at commit; the
+  integration tests at push; e2e only on the PR pipeline.
