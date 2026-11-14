@@ -74,6 +74,10 @@ mise's `[bootstrap] dotfile_groups`, list `flow-rules`, `flow-skills` and
 `flow-tools` there too, or the next sync removes flow's rules and skills from
 `~/.claude` and its tool folders from `~/.config/mise/conf.d`.
 
+The plugin carries flow-cli, the one binary that holds flow's scripts, in its
+`bin/` folder, built for Apple Silicon macOS and x86_64 Linux; flow's mise
+config puts this machine's on PATH for flow's tasks, so nothing installs it.
+
 mise also installs the tools flow uses: lefthook, gitleaks, and neurons, the
 MCP server behind the thinking graph the rules ask for, from its public
 release. Releases ship for Apple Silicon macOS and x86_64 Linux. Each tool

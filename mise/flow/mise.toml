@@ -18,6 +18,14 @@ task.source_freshness_hash_contents = true
 [settings.url_replacements]
 'regex:^https://archive\.apache\.org/dist/maven/maven-[0-9]+/(3\.9\.[1-9][^/]*|3\.[1-9][0-9][^/]*|[4-9]\.[^/]*)/binaries/(.+)$' = "https://repo1.maven.org/maven2/org/apache/maven/apache-maven/$1/$2"
 
+# flow-cli, the one binary that holds flow's scripts as subcommands. A release
+# puts it in the plugin's bin folder, once for each platform flow ships for,
+# in a folder named the way mise names that platform. This puts this
+# machine's on PATH, so a flow task runs flow-cli by name. The path goes
+# through the conf.d link, so ../../ is the plugin root.
+[env]
+_.path = ["{{ config_root }}/../../bin/{{ os() }}-{{ arch() }}"]
+
 # Each tool has its own folder in ../tools, with its tool line and its
 # module: a machine tool's flow:sync:<tool>, a lint or coverage tool's
 # flow:setup:<tool>, whose tool line loads only under `mise -E flow-<language>`.
