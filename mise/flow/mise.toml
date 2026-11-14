@@ -82,6 +82,14 @@ run = [
   "mise -E flow-java,flow-rust install gitleaks",
 ]
 
+[tasks."flow:sandbox"]
+description = "Run one of flow's check tasks so that it cannot change the project's files: flow:sandbox -- <task> <arguments>"
+hide = true
+# flow-cli makes a fresh folder, runs the named task through mise's own
+# sandbox with only that folder writable, and deletes it. The task's name and
+# arguments follow this command.
+run = "flow-cli sandbox"
+
 [tasks."flow:setup"]
 description = "Set up the project in FLOW_PROJECT_DIR: its languages' tools and its hooks, and the neurons db of the session in FLOW_SESSION_DIR, each module skipped when unchanged"
 hide = true

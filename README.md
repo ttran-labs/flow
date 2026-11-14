@@ -78,6 +78,13 @@ The plugin carries flow-cli, the one binary that holds flow's scripts, in its
 `bin/` folder, built for Apple Silicon macOS and x86_64 Linux; flow's mise
 config puts this machine's on PATH for flow's tasks, so nothing installs it.
 
+flow's checks run through `mise run flow:sandbox -- <task>`. flow-cli makes a
+fresh folder and runs the check's task under mise's own sandbox, so the task
+reads the repo and can write only that folder, named in `FLOW_SANDBOX_DIR`
+and deleted when the task ends. A check cannot change a file of the repo it
+checks. A repo under `/tmp` is not protected: mise's sandbox leaves `/tmp`
+writable.
+
 mise also installs the tools flow uses: lefthook, gitleaks, and neurons, the
 MCP server behind the thinking graph the rules ask for, from its public
 release. Releases ship for Apple Silicon macOS and x86_64 Linux. Each tool
