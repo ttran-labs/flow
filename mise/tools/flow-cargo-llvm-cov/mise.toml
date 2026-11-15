@@ -11,7 +11,7 @@ skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
 sources = ["{{ config_root }}/**"]
 run = [
   # The same three steps as flow:sync:lefthook.
-  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} github:taiki-e/cargo-llvm-cov",
-  "mise -E flow-java,flow-rust upgrade --global github:taiki-e/cargo-llvm-cov",
-  "mise -E flow-java,flow-rust install github:taiki-e/cargo-llvm-cov",
+  "mise -E flow-java,flow-lint,flow-rust lock --global --platform {{ os() }}-{{ arch() }} github:taiki-e/cargo-llvm-cov",
+  "mise -E flow-java,flow-lint,flow-rust upgrade --global github:taiki-e/cargo-llvm-cov",
+  "mise -E flow-java,flow-lint,flow-rust install github:taiki-e/cargo-llvm-cov",
 ]

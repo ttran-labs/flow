@@ -1,17 +1,18 @@
-# ast-grep, flow's structural Rust check.
+# ast-grep, which checks flow's shared rules: the ones that hold in any language.
 # /flow:sync links this folder as ~/.config/mise/conf.d/flow-ast-grep;
-# its tool line, in mise.flow-rust.toml, loads only under `mise -E flow-rust`.
+# its tool line, in mise.flow-lint.toml, loads only under `mise -E flow-lint`.
 [tasks."flow:setup:ast-grep"]
-description = "In a Rust project, move ast-grep to the newest release inside its major"
+description = "In a Java, Rust or JS/TS project, move ast-grep to the newest release inside its major"
 hide = true
 dir = "{{ env.HOME }}"
 lock = "mise-global-lockfile"
-# As flow:setup:checkstyle's, for Rust's build file.
-skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
+# As flow:setup:checkstyle's, for the build files of every language the
+# shared rules check.
+skip_if = 'test ! -f "$FLOW_PROJECT_DIR/pom.xml" -a ! -f "$FLOW_PROJECT_DIR/build.gradle" -a ! -f "$FLOW_PROJECT_DIR/build.gradle.kts" -a ! -f "$FLOW_PROJECT_DIR/Cargo.toml" -a ! -f "$FLOW_PROJECT_DIR/package.json" -a ! -f "$FLOW_PROJECT_DIR/tsconfig.json"'
 sources = ["{{ config_root }}/**"]
 run = [
   # The same three steps as flow:sync:lefthook.
-  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} ast-grep",
-  "mise -E flow-java,flow-rust upgrade --global ast-grep",
-  "mise -E flow-java,flow-rust install ast-grep",
+  "mise -E flow-java,flow-lint,flow-rust lock --global --platform {{ os() }}-{{ arch() }} ast-grep",
+  "mise -E flow-java,flow-lint,flow-rust upgrade --global ast-grep",
+  "mise -E flow-java,flow-lint,flow-rust install ast-grep",
 ]

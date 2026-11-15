@@ -19,7 +19,7 @@ lock = "mise-global-lockfile"
 sources = ["{{ config_root }}/**"]
 run = [
   # The same three steps as flow:sync:lefthook.
-  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} github:ttran-labs/neurons",
-  "mise -E flow-java,flow-rust upgrade --global github:ttran-labs/neurons",
-  "mise -E flow-java,flow-rust install github:ttran-labs/neurons",
+  "mise -E flow-java,flow-lint,flow-rust lock --global --platform {{ os() }}-{{ arch() }} github:ttran-labs/neurons",
+  "mise -E flow-java,flow-lint,flow-rust upgrade --global github:ttran-labs/neurons",
+  "mise -E flow-java,flow-lint,flow-rust install github:ttran-labs/neurons",
 ]

@@ -85,6 +85,11 @@ and deleted when the task ends. A check cannot change a file of the repo it
 checks. A repo under `/tmp` is not protected: mise's sandbox leaves `/tmp`
 writable.
 
+Every commit in a Rust, JS/TS or Java repo is checked against flow's shared
+rules, the ones that hold in any language: no emoji and no em or en dash in a
+comment or a string, no ticket id in a comment, and no misspelling. ast-grep
+checks the first three and typos the last, each through the sandbox.
+
 mise also installs the tools flow uses: lefthook, gitleaks, and neurons, the
 MCP server behind the thinking graph the rules ask for, from its public
 release. Releases ship for Apple Silicon macOS and x86_64 Linux. Each tool

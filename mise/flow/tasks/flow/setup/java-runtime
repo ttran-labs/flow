@@ -18,7 +18,7 @@ from pathlib import Path
 
 override_file = Path(os.environ["MISE_CONFIG_ROOT"]) / "flow-java.override.toml"
 tools = list(tomllib.loads(override_file.read_text())["tools"])
-mise_command = ["mise", "-E", "flow-java,flow-rust"]
+mise_command = ["mise", "-E", "flow-java,flow-lint,flow-rust"]
 # The same three steps as flow:sync:lefthook.
 for command in ([*mise_command, "lock", "--global", "--platform", os.environ["FLOW_LOCK_PLATFORM"], *tools],
                 [*mise_command, "upgrade", "--global", *tools],

@@ -77,9 +77,9 @@ lock = "mise-global-lockfile"
 depends = ["flow:sync:*"]
 run = [
   # The same three steps as flow:sync:lefthook.
-  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} gitleaks",
-  "mise -E flow-java,flow-rust upgrade --global gitleaks",
-  "mise -E flow-java,flow-rust install gitleaks",
+  "mise -E flow-java,flow-lint,flow-rust lock --global --platform {{ os() }}-{{ arch() }} gitleaks",
+  "mise -E flow-java,flow-lint,flow-rust upgrade --global gitleaks",
+  "mise -E flow-java,flow-lint,flow-rust install gitleaks",
 ]
 
 [tasks."flow:sandbox"]
@@ -89,6 +89,22 @@ hide = true
 # sandbox with only that folder writable, and deletes it. The task's name and
 # arguments follow this command.
 run = "flow-cli sandbox"
+
+# flow's shared rules, the ones that hold in any language. A lefthook job runs
+# each through flow:sandbox, under -E flow-lint, with the staged files of its
+# language after the command. The folder has a default: a bare
+# env.FLOW_PROJECT_DIR makes mise warn on every task listing outside a job.
+[tasks."flow:lint:ast-grep"]
+description = "Check files against flow's shared rules: no emoji, no em or en dash, no ticket id in a comment"
+hide = true
+dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
+run = "ast-grep scan --config {{ config_root }}/lint/ast-grep/sgconfig.yml"
+
+[tasks."flow:lint:typos"]
+description = "Check files for misspellings, on typos' own dictionary"
+hide = true
+dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
+run = "typos --isolated --config {{ config_root }}/lint/typos.toml"
 
 [tasks."flow:setup"]
 description = "Set up the project in FLOW_PROJECT_DIR: its languages' tools and its hooks, and the neurons db of the session in FLOW_SESSION_DIR, each module skipped when unchanged"

@@ -1,0 +1,3 @@
+# flow's shared rules: the owner's conventions that hold in any language.
+# flow:lint:ast-grep scans a commit's staged files with them.
+ruleDirs: [rules]

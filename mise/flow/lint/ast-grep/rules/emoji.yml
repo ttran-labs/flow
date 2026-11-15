@@ -1,0 +1,59 @@
+# No emoji: the owner's convention for every language. One copy per language,
+# because a comment and a string's text have other node names in each.
+# The copyright, registered and trademark signs are not emoji here.
+id: rust-emoji
+language: rust
+severity: error
+message: "No emoji in a comment or a string."
+rule:
+  any:
+    - kind: line_comment
+    - kind: block_comment
+    - kind: string_content
+    - kind: char_literal
+  regex: '[\p{Extended_Pictographic}--[\x{A9}\x{AE}\x{2122}]]'
+---
+id: javascript-emoji
+language: javascript
+severity: error
+message: "No emoji in a comment or a string."
+rule:
+  any:
+    - kind: comment
+    - kind: string_fragment
+    - kind: jsx_text
+  regex: '[\p{Extended_Pictographic}--[\x{A9}\x{AE}\x{2122}]]'
+---
+id: typescript-emoji
+language: typescript
+severity: error
+message: "No emoji in a comment or a string."
+rule:
+  any:
+    - kind: comment
+    - kind: string_fragment
+  regex: '[\p{Extended_Pictographic}--[\x{A9}\x{AE}\x{2122}]]'
+---
+id: tsx-emoji
+language: tsx
+severity: error
+message: "No emoji in a comment or a string."
+rule:
+  any:
+    - kind: comment
+    - kind: string_fragment
+    - kind: jsx_text
+  regex: '[\p{Extended_Pictographic}--[\x{A9}\x{AE}\x{2122}]]'
+---
+id: java-emoji
+language: java
+severity: error
+message: "No emoji in a comment or a string."
+rule:
+  any:
+    - kind: line_comment
+    - kind: block_comment
+    - kind: string_fragment
+    - kind: multiline_string_fragment
+    - kind: character_literal
+  regex: '[\p{Extended_Pictographic}--[\x{A9}\x{AE}\x{2122}]]'

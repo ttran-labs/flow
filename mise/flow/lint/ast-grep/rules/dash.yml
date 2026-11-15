@@ -1,0 +1,58 @@
+# No em or en dash: the owner's convention for every language. One copy per
+# language, because a comment and a string's text have other node names in each.
+id: rust-dash
+language: rust
+severity: error
+message: "No em or en dash in a comment or a string: use a comma, a colon or a full stop."
+rule:
+  any:
+    - kind: line_comment
+    - kind: block_comment
+    - kind: string_content
+    - kind: char_literal
+  regex: '[\x{2013}\x{2014}]'
+---
+id: javascript-dash
+language: javascript
+severity: error
+message: "No em or en dash in a comment or a string: use a comma, a colon or a full stop."
+rule:
+  any:
+    - kind: comment
+    - kind: string_fragment
+    - kind: jsx_text
+  regex: '[\x{2013}\x{2014}]'
+---
+id: typescript-dash
+language: typescript
+severity: error
+message: "No em or en dash in a comment or a string: use a comma, a colon or a full stop."
+rule:
+  any:
+    - kind: comment
+    - kind: string_fragment
+  regex: '[\x{2013}\x{2014}]'
+---
+id: tsx-dash
+language: tsx
+severity: error
+message: "No em or en dash in a comment or a string: use a comma, a colon or a full stop."
+rule:
+  any:
+    - kind: comment
+    - kind: string_fragment
+    - kind: jsx_text
+  regex: '[\x{2013}\x{2014}]'
+---
+id: java-dash
+language: java
+severity: error
+message: "No em or en dash in a comment or a string: use a comma, a colon or a full stop."
+rule:
+  any:
+    - kind: line_comment
+    - kind: block_comment
+    - kind: string_fragment
+    - kind: multiline_string_fragment
+    - kind: character_literal
+  regex: '[\x{2013}\x{2014}]'

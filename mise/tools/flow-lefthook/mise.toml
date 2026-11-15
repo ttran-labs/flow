@@ -19,8 +19,8 @@ run = [
   # upgrade and install update one. This machine's platform only: a new lock
   # otherwise checks the tool's provenance for seven platforms, and one
   # failed check fails sync.
-  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} lefthook",
-  "mise -E flow-java,flow-rust upgrade --global lefthook",
+  "mise -E flow-java,flow-lint,flow-rust lock --global --platform {{ os() }}-{{ arch() }} lefthook",
+  "mise -E flow-java,flow-lint,flow-rust upgrade --global lefthook",
   # Installs what upgrade left out and moves mise's installs/lefthook/global link.
-  "mise -E flow-java,flow-rust install lefthook",
+  "mise -E flow-java,flow-lint,flow-rust install lefthook",
 ]

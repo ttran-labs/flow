@@ -1,2 +1,14 @@
-# flow's Rust checks, none yet. mise run flow:setup-hooks extends this file,
-# by its absolute path, from each repo with a Rust build file at its root.
+# flow's Rust checks. mise run flow:setup-hooks extends this file, by its
+# absolute path, from each repo with a Rust build file at its root.
+# Each job is one mise line: flow:sandbox runs the check's task so that it
+# reads the repo and cannot change a file of it. The job names carry the
+# language: a repo of two languages extends two of these files, and lefthook
+# merges jobs of one name.
+pre-commit:
+  jobs:
+    - name: flow shared rules (rust)
+      glob: "*.rs"
+      run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-lint run flow:sandbox -- flow:lint:ast-grep {staged_files}
+    - name: flow spelling (rust)
+      glob: "*.rs"
+      run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-lint run flow:sandbox -- flow:lint:typos {staged_files}

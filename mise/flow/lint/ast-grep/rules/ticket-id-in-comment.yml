@@ -1,0 +1,49 @@
+# No ticket id in a comment: which ticket asked for a change belongs in the
+# commit, not in the code. One copy per language, because a comment has
+# another node name in each.
+id: rust-ticket-id-in-comment
+language: rust
+severity: error
+message: "A ticket id belongs in the commit message, not in a comment."
+rule:
+  any:
+    - kind: line_comment
+    - kind: block_comment
+  regex: '#\d+'
+---
+id: javascript-ticket-id-in-comment
+language: javascript
+severity: error
+message: "A ticket id belongs in the commit message, not in a comment."
+rule:
+  any:
+    - kind: comment
+  regex: '#\d+'
+---
+id: typescript-ticket-id-in-comment
+language: typescript
+severity: error
+message: "A ticket id belongs in the commit message, not in a comment."
+rule:
+  any:
+    - kind: comment
+  regex: '#\d+'
+---
+id: tsx-ticket-id-in-comment
+language: tsx
+severity: error
+message: "A ticket id belongs in the commit message, not in a comment."
+rule:
+  any:
+    - kind: comment
+  regex: '#\d+'
+---
+id: java-ticket-id-in-comment
+language: java
+severity: error
+message: "A ticket id belongs in the commit message, not in a comment."
+rule:
+  any:
+    - kind: line_comment
+    - kind: block_comment
+  regex: '#\d+'

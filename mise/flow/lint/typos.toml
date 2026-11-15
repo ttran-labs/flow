@@ -1,0 +1,4 @@
+# flow's shared spelling check: typos' own dictionary of common misspellings.
+# Nothing here depends on a language. flow:lint:typos runs it with
+# --isolated, so a project's own typos config never changes the result.
+[default]

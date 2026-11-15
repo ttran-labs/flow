@@ -11,9 +11,9 @@ skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
 sources = ["{{ config_root }}/**"]
 run = [
   # The same three steps as flow:sync:lefthook.
-  "mise -E flow-java,flow-rust lock --global --platform {{ os() }}-{{ arch() }} cargo:cargo-modules",
+  "mise -E flow-java,flow-lint,flow-rust lock --global --platform {{ os() }}-{{ arch() }} cargo:cargo-modules",
   # cargo-modules builds from source with the project's cargo, so its first
   # use installs it, never this module: named, upgrade would install it now.
   # Once installed, it moves like the others.
-  '[ -z "$(mise -E flow-java,flow-rust ls --installed cargo:cargo-modules)" ] || { mise -E flow-java,flow-rust upgrade --global cargo:cargo-modules && mise -E flow-java,flow-rust install cargo:cargo-modules; }',
+  '[ -z "$(mise -E flow-java,flow-lint,flow-rust ls --installed cargo:cargo-modules)" ] || { mise -E flow-java,flow-lint,flow-rust upgrade --global cargo:cargo-modules && mise -E flow-java,flow-lint,flow-rust install cargo:cargo-modules; }',
 ]
