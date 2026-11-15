@@ -69,18 +69,58 @@ dir = "{{ cwd }}"
 # tasks/flow/setup-hooks is flow:setup-hooks.
 includes = ["tasks"]
 
+# Every flow env, named once. Each step that writes mise's global lock loads
+# them all: mise drops from the lock the tools of an env that is not loaded.
+[vars]
+flow_envs = "flow-java,flow-lint,flow-rust,flow-typescript"
+
+# What a tool's module does: move the tool it names in vars.tool to the newest
+# release inside its major. Each tool folder's module extends this, and so
+# does flow:sync, for gitleaks.
+[task_templates."flow:move-tool"]
+dir = "{{ env.HOME }}"
+# mise fails an install when another process changes the global lockfile
+# meanwhile, so every task that writes it takes this task lock: the modules
+# run one at a time, also across two syncs at once.
+lock = "mise-global-lockfile"
+run = [
+  # mise starts a lockfile only from `mise lock`; upgrade and install update
+  # one. This machine's platform only: a new lock otherwise checks the tool's
+  # provenance for seven platforms, and one failed check fails sync.
+  "mise -E {{ vars.flow_envs }} lock --global --platform {{ os() }}-{{ arch() }} {{ vars.tool }}",
+  "mise -E {{ vars.flow_envs }} upgrade --global {{ vars.tool }}",
+  # Installs what upgrade left out and moves mise's installs/<tool>/global link.
+  "mise -E {{ vars.flow_envs }} install {{ vars.tool }}",
+]
+
 [tasks."flow:sync"]
 description = "Run every flow:sync:<tool> module whose files changed, and move gitleaks to the newest release inside its major"
 hide = true
-dir = "{{ env.HOME }}"
-lock = "mise-global-lockfile"
+extends = "flow:move-tool"
+vars = { tool = "gitleaks" }
 depends = ["flow:sync:*"]
-run = [
-  # The same three steps as flow:sync:lefthook.
-  "mise -E flow-java,flow-lint,flow-rust lock --global --platform {{ os() }}-{{ arch() }} gitleaks",
-  "mise -E flow-java,flow-lint,flow-rust upgrade --global gitleaks",
-  "mise -E flow-java,flow-lint,flow-rust install gitleaks",
-]
+
+# Rust's own tools at their defaults, on the project's own toolchain: flow
+# installs no Rust, and looks for cargo in rustup's folder, which a GUI git
+# client's PATH lacks. clippy compiles, so it writes: its build goes to one
+# folder flow keeps between commits, cargo's downloads to cargo's own folder,
+# and rustc's temporary files into the sandbox folder. The project stays
+# read-only. --locked: a commit never rewrites Cargo.lock. Both check the
+# whole crate, so their jobs pass no file names.
+[tasks."flow:lint:clippy"]
+description = "Check a Rust project with clippy, warnings as errors"
+hide = true
+dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
+env = { PATH = "{{ env.HOME }}/.cargo/bin:{{ env.PATH }}", CARGO_TARGET_DIR = "{{ env.HOME }}/.cache/flow/cargo-target", TMPDIR = '{{ get_env(name="FLOW_SANDBOX_DIR", default="/tmp") }}' }
+allow_write = ["~/.cache/flow/cargo-target", '{{ get_env(name="CARGO_HOME", default=env.HOME ~ "/.cargo") }}']
+run = "cargo clippy --locked --all-targets -- -D warnings"
+
+[tasks."flow:lint:rustfmt"]
+description = "Check a Rust project's formatting with rustfmt, without rewriting a file"
+hide = true
+dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
+env = { PATH = "{{ env.HOME }}/.cargo/bin:{{ env.PATH }}" }
+run = "cargo fmt --check"
 
 [tasks."flow:sandbox"]
 description = "Run one of flow's check tasks so that it cannot change the project's files: flow:sandbox -- <task> <arguments>"
@@ -89,6 +129,22 @@ hide = true
 # sandbox with only that folder writable, and deletes it. The task's name and
 # arguments follow this command.
 run = "flow-cli sandbox"
+
+# Java's own tools at their defaults, on the tools' Java from the flow-java
+# env, never the project's JDK. PMD's quickstart rules block. Checkstyle's
+# Google style reports and blocks nothing: that config's own severity is
+# warning.
+[tasks."flow:lint:pmd"]
+description = "Check Java files against PMD's quickstart rules"
+hide = true
+dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
+run = "pmd check --rulesets rulesets/java/quickstart.xml --format text --no-progress --no-cache"
+
+[tasks."flow:lint:checkstyle"]
+description = "Report where Java files leave Google Java Style, without blocking"
+hide = true
+dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
+run = 'java -jar "$(command -v checkstyle)" -c /google_checks.xml'
 
 # flow's shared rules, the ones that hold in any language. A lefthook job runs
 # each through flow:sandbox, under -E flow-lint, with the staged files of its
@@ -105,6 +161,17 @@ description = "Check files for misspellings, on typos' own dictionary"
 hide = true
 dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
 run = "typos --isolated --config {{ config_root }}/lint/typos.toml"
+
+# Biome at its defaults: the recommended rules, and the formatter with spaces,
+# which prints what Prettier prints. It reports and never rewrites a file. A
+# project with a linter or formatter config of its own keeps its own tools,
+# so two formatters never judge one file: the task is skipped there.
+[tasks."flow:lint:biome"]
+description = "Lint and format-check JS and TS files with Biome, unless the project has its own lint or format config"
+hide = true
+dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
+skip_if = 'ls "$FLOW_PROJECT_DIR"/eslint.config.* "$FLOW_PROJECT_DIR"/.eslintrc* "$FLOW_PROJECT_DIR"/biome.json "$FLOW_PROJECT_DIR"/biome.jsonc "$FLOW_PROJECT_DIR"/.oxlintrc.json "$FLOW_PROJECT_DIR"/.prettierrc* 2>/dev/null | grep -q .'
+run = "biome check --config-path={{ config_root }}/lint/biome --no-errors-on-unmatched --files-ignore-unknown=true"
 
 [tasks."flow:setup"]
 description = "Set up the project in FLOW_PROJECT_DIR: its languages' tools and its hooks, and the neurons db of the session in FLOW_SESSION_DIR, each module skipped when unchanged"

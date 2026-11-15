@@ -9,6 +9,9 @@ pre-commit:
     - name: flow shared rules (typescript)
       glob: "*.{js,jsx,mjs,cjs,ts,tsx}"
       run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-lint run flow:sandbox -- flow:lint:ast-grep {staged_files}
+    - name: flow biome (typescript)
+      glob: "*.{js,jsx,mjs,cjs,ts,tsx}"
+      run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-typescript run flow:sandbox -- flow:lint:biome {staged_files}
     - name: flow spelling (typescript)
       glob: "*.{js,jsx,mjs,cjs,ts,tsx}"
       run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-lint run flow:sandbox -- flow:lint:typos {staged_files}

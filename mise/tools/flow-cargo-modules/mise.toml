@@ -4,16 +4,16 @@
 [tasks."flow:setup:cargo-modules"]
 description = "In a Rust project, move cargo-modules to the newest release inside its major"
 hide = true
-dir = "{{ env.HOME }}"
-lock = "mise-global-lockfile"
+extends = "flow:move-tool"
+vars = { tool = "cargo:cargo-modules" }
 # As flow:setup:checkstyle's, for Rust's build file.
 skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
 sources = ["{{ config_root }}/**"]
 run = [
-  # The same three steps as flow:sync:lefthook.
-  "mise -E flow-java,flow-lint,flow-rust lock --global --platform {{ os() }}-{{ arch() }} cargo:cargo-modules",
+  # The template's lock step, then steps of its own.
+  "mise -E {{ vars.flow_envs }} lock --global --platform {{ os() }}-{{ arch() }} {{ vars.tool }}",
   # cargo-modules builds from source with the project's cargo, so its first
   # use installs it, never this module: named, upgrade would install it now.
   # Once installed, it moves like the others.
-  '[ -z "$(mise -E flow-java,flow-lint,flow-rust ls --installed cargo:cargo-modules)" ] || { mise -E flow-java,flow-lint,flow-rust upgrade --global cargo:cargo-modules && mise -E flow-java,flow-lint,flow-rust install cargo:cargo-modules; }',
+  '[ -z "$(mise -E {{ vars.flow_envs }} ls --installed {{ vars.tool }})" ] || { mise -E {{ vars.flow_envs }} upgrade --global {{ vars.tool }} && mise -E {{ vars.flow_envs }} install {{ vars.tool }}; }',
 ]

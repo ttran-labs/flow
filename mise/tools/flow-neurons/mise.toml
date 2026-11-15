@@ -14,12 +14,6 @@ minimum_release_age_excludes = ["github:ttran-labs/neurons"]
 [tasks."flow:sync:neurons"]
 description = "Move neurons to the newest release inside its major"
 hide = true
-dir = "{{ env.HOME }}"
-lock = "mise-global-lockfile"
+extends = "flow:move-tool"
+vars = { tool = "github:ttran-labs/neurons" }
 sources = ["{{ config_root }}/**"]
-run = [
-  # The same three steps as flow:sync:lefthook.
-  "mise -E flow-java,flow-lint,flow-rust lock --global --platform {{ os() }}-{{ arch() }} github:ttran-labs/neurons",
-  "mise -E flow-java,flow-lint,flow-rust upgrade --global github:ttran-labs/neurons",
-  "mise -E flow-java,flow-lint,flow-rust install github:ttran-labs/neurons",
-]

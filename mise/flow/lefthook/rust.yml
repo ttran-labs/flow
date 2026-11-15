@@ -6,6 +6,14 @@
 # merges jobs of one name.
 pre-commit:
   jobs:
+    # clippy's kept build folder must exist before the sandbox starts: on
+    # Linux the sandbox can only allow a folder that is already there.
+    - name: flow clippy (rust)
+      glob: "*.rs"
+      run: mkdir -p ~/.cache/flow/cargo-target && FLOW_PROJECT_DIR="$PWD" mise -C ~ run flow:sandbox -- flow:lint:clippy
+    - name: flow rustfmt (rust)
+      glob: "*.rs"
+      run: FLOW_PROJECT_DIR="$PWD" mise -C ~ run flow:sandbox -- flow:lint:rustfmt
     - name: flow shared rules (rust)
       glob: "*.rs"
       run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-lint run flow:sandbox -- flow:lint:ast-grep {staged_files}

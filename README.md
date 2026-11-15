@@ -88,7 +88,17 @@ writable.
 Every commit in a Rust, JS/TS or Java repo is checked against flow's shared
 rules, the ones that hold in any language: no emoji and no em or en dash in a
 comment or a string, no ticket id in a comment, and no misspelling. ast-grep
-checks the first three and typos the last, each through the sandbox.
+checks the first three and typos the last, each through the sandbox. A Java
+repo is also checked by Java's own tools at their defaults, on flow's own
+Java: PMD's quickstart rules block, and Checkstyle's Google style reports
+without blocking. A Rust repo is checked by clippy, with warnings as errors, and
+by a rustfmt check, both from the project's own toolchain; clippy's build
+output goes to a folder flow keeps outside the repo.
+
+A JS or TS repo is also linted and format-checked by Biome at its defaults:
+the recommended rules, and the formatter with spaces. A project with its own
+ESLint, Prettier or Biome config keeps its own tools, and flow's Biome check
+is skipped there.
 
 mise also installs the tools flow uses: lefthook, gitleaks, and neurons, the
 MCP server behind the thinking graph the rules ask for, from its public

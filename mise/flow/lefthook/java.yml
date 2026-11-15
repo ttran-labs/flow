@@ -6,6 +6,12 @@
 # merges jobs of one name.
 pre-commit:
   jobs:
+    - name: flow pmd (java)
+      glob: "*.java"
+      run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-java run flow:sandbox -- flow:lint:pmd {staged_files}
+    - name: flow google style (java)
+      glob: "*.java"
+      run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-java run flow:sandbox -- flow:lint:checkstyle {staged_files}
     - name: flow shared rules (java)
       glob: "*.java"
       run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-lint run flow:sandbox -- flow:lint:ast-grep {staged_files}
