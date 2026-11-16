@@ -2,10 +2,9 @@
 # /flow:sync links this folder as ~/.config/mise/conf.d/flow-biome;
 # its tool line, in mise.flow-typescript.toml, loads only under `mise -E flow-typescript`.
 [tasks."flow:setup:biome"]
+skip_if = "{{ vars.no_typescript_build_file }}"
 description = "In a JS or TS project, move Biome to the newest release inside its major"
 hide = true
 extends = "flow:move-tool"
 vars = { tool = "biome" }
-# As flow:setup:checkstyle's, for the build files of a JS or TS project.
-skip_if = 'test ! -f "$FLOW_PROJECT_DIR/package.json" -a ! -f "$FLOW_PROJECT_DIR/tsconfig.json"'
 sources = ["{{ config_root }}/**"]

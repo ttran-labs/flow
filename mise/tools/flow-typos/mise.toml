@@ -2,11 +2,10 @@
 # /flow:sync links this folder as ~/.config/mise/conf.d/flow-typos;
 # its tool line, in mise.flow-lint.toml, loads only under `mise -E flow-lint`.
 [tasks."flow:setup:typos"]
+# The shared rules check every language flow lints.
+skip_if = "{{ vars.no_java_build_file }} && {{ vars.no_rust_build_file }} && {{ vars.no_typescript_build_file }}"
 description = "In a Java, Rust or JS/TS project, move typos to the newest release inside its major"
 hide = true
 extends = "flow:move-tool"
 vars = { tool = "typos" }
-# As flow:setup:checkstyle's, for the build files of every language the
-# shared rules check.
-skip_if = 'test ! -f "$FLOW_PROJECT_DIR/pom.xml" -a ! -f "$FLOW_PROJECT_DIR/build.gradle" -a ! -f "$FLOW_PROJECT_DIR/build.gradle.kts" -a ! -f "$FLOW_PROJECT_DIR/Cargo.toml" -a ! -f "$FLOW_PROJECT_DIR/package.json" -a ! -f "$FLOW_PROJECT_DIR/tsconfig.json"'
 sources = ["{{ config_root }}/**"]

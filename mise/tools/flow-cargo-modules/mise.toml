@@ -2,12 +2,11 @@
 # /flow:sync links this folder as ~/.config/mise/conf.d/flow-cargo-modules;
 # its tool line, in mise.flow-rust.toml, loads only under `mise -E flow-rust`.
 [tasks."flow:setup:cargo-modules"]
+skip_if = "{{ vars.no_rust_build_file }}"
 description = "In a Rust project, move cargo-modules to the newest release inside its major"
 hide = true
 extends = "flow:move-tool"
 vars = { tool = "cargo:cargo-modules" }
-# As flow:setup:checkstyle's, for Rust's build file.
-skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
 sources = ["{{ config_root }}/**"]
 run = [
   # The template's lock step, then steps of its own.

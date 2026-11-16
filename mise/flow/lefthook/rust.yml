@@ -1,22 +1,26 @@
 # flow's Rust checks. mise run flow:setup-hooks extends this file, by its
 # absolute path, from each repo with a Rust build file at its root.
-# Each job is one mise line: flow:sandbox runs the check's task so that it
-# reads the repo and cannot change a file of it. The job names carry the
-# language: a repo of two languages extends two of these files, and lefthook
-# merges jobs of one name.
+# Each job is one line on the {sandbox} template: flow:sandbox runs the
+# check's task so that it reads the repo and cannot change a file of it.
+# MISE_ENV names the tool set a check needs, as `mise -E` does. The job names
+# carry the language: a repo of two languages extends two of these files, and
+# lefthook merges jobs of one name. The template is the same line in each file.
+templates:
+  sandbox: FLOW_PROJECT_DIR="$PWD" mise -C ~ run flow:sandbox --
+
 pre-commit:
   jobs:
     # clippy's kept build folder must exist before the sandbox starts: on
     # Linux the sandbox can only allow a folder that is already there.
     - name: flow clippy (rust)
       glob: "*.rs"
-      run: mkdir -p ~/.cache/flow/cargo-target && FLOW_PROJECT_DIR="$PWD" mise -C ~ run flow:sandbox -- flow:lint:clippy
+      run: mkdir -p ~/.cache/flow/cargo-target && {sandbox} flow:lint:clippy
     - name: flow rustfmt (rust)
       glob: "*.rs"
-      run: FLOW_PROJECT_DIR="$PWD" mise -C ~ run flow:sandbox -- flow:lint:rustfmt
+      run: "{sandbox} flow:lint:rustfmt"
     - name: flow shared rules (rust)
       glob: "*.rs"
-      run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-lint run flow:sandbox -- flow:lint:ast-grep {staged_files}
+      run: MISE_ENV=flow-lint {sandbox} flow:lint:ast-grep {staged_files}
     - name: flow spelling (rust)
       glob: "*.rs"
-      run: FLOW_PROJECT_DIR="$PWD" mise -C ~ -E flow-lint run flow:sandbox -- flow:lint:typos {staged_files}
+      run: MISE_ENV=flow-lint {sandbox} flow:lint:typos {staged_files}

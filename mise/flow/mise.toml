@@ -73,6 +73,17 @@ includes = ["tasks"]
 # them all: mise drops from the lock the tools of an env that is not loaded.
 [vars]
 flow_envs = "flow-java,flow-lint,flow-rust,flow-typescript"
+# When a project is not of a language: none of that language's build files is
+# in the folder the SessionStart hook names in FLOW_PROJECT_DIR. Each tool's
+# module skips on its language's test, so a project gets only its own
+# languages' tools. A module runs from the home folder, so mise never loads
+# that project's own config. `test -f`, never `ls`: ls fails when any one of
+# the files is missing. `$$` is mise's literal `$`: the module's shell reads
+# FLOW_PROJECT_DIR when the module runs. With one `$` mise reads it instead,
+# when it loads this file in any shell, and warns wherever it is not set.
+no_java_build_file = 'test ! -f "$$FLOW_PROJECT_DIR/pom.xml" -a ! -f "$$FLOW_PROJECT_DIR/build.gradle" -a ! -f "$$FLOW_PROJECT_DIR/build.gradle.kts"'
+no_rust_build_file = 'test ! -f "$$FLOW_PROJECT_DIR/Cargo.toml"'
+no_typescript_build_file = 'test ! -f "$$FLOW_PROJECT_DIR/package.json" -a ! -f "$$FLOW_PROJECT_DIR/tsconfig.json"'
 
 # What a tool's module does: move the tool it names in vars.tool to the newest
 # release inside its major. Each tool folder's module extends this, and so

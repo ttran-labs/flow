@@ -2,10 +2,9 @@
 # /flow:sync links this folder as ~/.config/mise/conf.d/flow-cargo-deny;
 # its tool line, in mise.flow-rust.toml, loads only under `mise -E flow-rust`.
 [tasks."flow:setup:cargo-deny"]
+skip_if = "{{ vars.no_rust_build_file }}"
 description = "In a Rust project, move cargo-deny to the newest release inside its major"
 hide = true
 extends = "flow:move-tool"
 vars = { tool = "cargo-deny" }
-# As flow:setup:checkstyle's, for Rust's build file.
-skip_if = 'test ! -f "$FLOW_PROJECT_DIR/Cargo.toml"'
 sources = ["{{ config_root }}/**"]
