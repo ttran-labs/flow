@@ -40,6 +40,11 @@ HOOKS_STAMP = Path("project/.config/flow/hooks.stamp")
 # Each line flow adds to the global ignore file, with a file it keeps out.
 IGNORE_LINES = {"lefthook-local.yml": LOCAL_CONFIG, "**/.config/flow/": HOOKS_STAMP}
 REPO_ROOT = Path(".")
+# On every run lefthook syncs the hooks with the repo's own lefthook config.
+# A repo with none fails that sync, with a red line at every commit, so it is
+# off there: this task installs the hooks. A repo with its own config keeps
+# the sync, which installs a hook that config adds.
+HOOK_SYNC_OFF = {"no_auto_install": True}
 # flow's folder inside git's own folder for the repo, as sh finds it at run
 # time. Every worktree shares it and the hooks beside it, so what flow keeps
 # there reaches a worktree git worktree add just made, which gets none of
@@ -239,9 +244,21 @@ def is_task_written_local_config(config, settings, shared_folder):
 
     text = config.read_text()
     job_files = read_flow_job_files(text, shared_folder)
+    # An earlier run wrote the file before the repo gained or lost a lefthook
+    # config of its own, or before the hook sync was turned off at all.
+    settings = {key: value for key, value in settings.items() if key != "no_auto_install"}
     return job_files is not None and any(
-        render_local_config({**settings, "rc": rc, "extends": job_files}) == text
-        for rc in (SHARED_RC, RC_IN_THE_COMMITTING_WORKTREE))
+        render_local_config({**settings, "rc": rc, "extends": job_files, **hook_sync}) == text
+        for rc in (SHARED_RC, RC_IN_THE_COMMITTING_WORKTREE)
+        for hook_sync in (HOOK_SYNC_OFF, {}))
+
+
+def has_own_lefthook_config():
+    """Whether the repo holds a lefthook config of its own, under any of the
+    names lefthook reads. A local config is named lefthook-local, which none
+    of these patterns match."""
+    return any(config for pattern in ("lefthook.*", ".lefthook.*", ".config/lefthook.*")
+               for config in Path().glob(pattern))
 
 
 def find_owners_local_config(settings, shared_folder):
@@ -329,6 +346,9 @@ def main():
     settings = {"lefthook": shlex.quote(str(lefthook)), "rc": SHARED_RC,
                 "extends": [job_file for project_folder in project_folders
                             for job_file in find_job_files(project_folder, shared_folder)]}
+    if not has_own_lefthook_config():
+        settings |= HOOK_SYNC_OFF
+
     config_text = render_local_config(settings)
 
     write_rc(mise, settings["extends"], shared_folder)
