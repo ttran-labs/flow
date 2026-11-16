@@ -1,9 +1,9 @@
 #!/bin/sh
-#MISE description="Give the git repo in FLOW_PROJECT_DIR flow's checks through flow:setup-hooks, again only when that task changed"
+#MISE description="Give the project folder in FLOW_PROJECT_DIR flow's checks through flow:setup-hooks, again only when that task or a job file changed"
 #MISE hide=true
 #MISE dir="{{ env.HOME }}"
 #MISE skip_if='test -z "$FLOW_PROJECT_DIR" || ! git -C "$FLOW_PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1'
-#MISE sources=["{{ config_root }}/tasks/flow/setup-hooks"]
+#MISE sources=["{{ config_root }}/tasks/flow/setup-hooks", "{{ config_root }}/lefthook/**"]
 #MISE outputs=["{{ env.FLOW_PROJECT_DIR | default(value='') }}/.config/flow/hooks.stamp"]
 # Every mise run renders the outputs template, so FLOW_PROJECT_DIR has a
 # default there; without it the module skips. The stamp sits in the project,

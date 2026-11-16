@@ -120,8 +120,8 @@ versions.
 ## Projects
 
 Every session sets up the project it starts in, with nothing typed: the
-repo's top level when the session starts inside a git repo. The SessionStart
-hook runs `mise -C ~ run flow:session-start`, which runs `flow:setup` with
+folder the session starts in, also when that is a folder below a repo's
+root. The SessionStart hook runs `mise -C ~ run flow:session-start`, which runs `flow:setup` with
 `FLOW_PROJECT_DIR` naming the project, from the home folder, so mise never
 loads the project's own config. Each module skips what is already done:
 
@@ -132,8 +132,8 @@ loads the project's own config. Each module skips what is already done:
   language's env, `~/.config/mise/mise.flow-java.lock` or
   `mise.flow-rust.lock`. Java 21, which flow's Java tools run on, comes
   from the flow-java override file, so it beats the project's own Java;
-- the hooks module runs `flow:setup-hooks` in a git repo, once per repo and
-  per worktree;
+- the hooks module runs `flow:setup-hooks` in a git repo, once per project
+  folder and per worktree;
 - the neurons module seeds the neurons db of the folder the session starts
   in, the one its MCP server opens, and lands each neurons release on it.
 
@@ -159,12 +159,18 @@ the graph once with `/graphify`:
 
 ## Checks in a repo
 
-Run `/flow:setup-hooks` once at the root of each repo, after `/flow:sync`.
-It finds the repo's languages from its build files (Java, Python, Rust,
-TypeScript), writes `.config/lefthook-local.yml` extending flow's job files
-for only those languages, and installs the git hooks. Every commit then
-runs those checks, also from a GUI git client like IntelliJ. It adds the
-files it writes to git's global ignore file, so `git status` stays clean.
+Run `/flow:setup-hooks` once in each repo, after `/flow:sync`. A repo's
+project folders are its root, the folder the session is in and each folder
+named after the command, as in `/flow:setup-hooks ases ases-services-quarkus`;
+a later run remembers them. It finds each project folder's languages from
+the build files in it (Java, Python, Rust, TypeScript), writes
+`.config/lefthook-local.yml` at the repo root extending flow's job files for
+only those languages, and installs the git hooks. Every commit then runs
+those checks, also from a GUI git client like IntelliJ. A project folder
+below the root gets jobs that run inside it, for the staged files under it,
+so a repo with no build file at its root still gets its projects' checks.
+It adds the files it writes to git's global ignore file, so `git status`
+stays clean.
 
 A new worktree needs nothing typed: the local config is ignored, so `git
 worktree add` leaves it out, and the worktree's first commit copies it in

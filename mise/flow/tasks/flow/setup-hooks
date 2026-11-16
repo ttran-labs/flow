@@ -1,28 +1,31 @@
 #!/usr/bin/env python3
-#MISE description="Point this repo's git hooks at flow's checks for the languages it builds"
+#MISE description="Point this repo's git hooks at flow's checks for the languages its project folders build"
 #MISE hide=true
 #MISE tools={python="3"}
-"""Gives the repo it runs in, or the one FLOW_PROJECT_DIR names when the
-session start sets the project up, flow's checks. It finds the languages
-from the build files at the repo root and writes .config/lefthook-local.yml,
-which extends flow's job file for each of those languages, keeps that file
-and the hidden .config/flow folder out of git through the global ignore
-file, and installs the hooks. The rc the hooks load and a copy of the local
-config go into git's own folder for the repo, which every worktree shares,
-so a worktree made later gets the config at its first commit. The repo's own
-lefthook config stays as it is; lefthook merges the two. A local config the
-owner wrote is never changed: the lines to add are printed instead, in that
-file's format."""
-import itertools
+"""Gives the repo it runs in flow's checks. A repo's project folders are its
+root, the folder the task starts in (the one FLOW_PROJECT_DIR names when the
+session start sets the project up) and each folder named as an argument; a
+later run remembers them. It finds each folder's languages from the build
+files in it and writes .config/lefthook-local.yml at the repo root, which
+extends flow's job file for each language, a copy that runs inside the
+folder for a project not at the root. It keeps that file and the hidden
+.config/flow folders out of git through the global ignore file, and installs
+the hooks. The rc the hooks load, the copied job files and a copy of the
+local config go into git's own folder for the repo, which every worktree
+shares, so a worktree made later gets the config at its first commit. The
+repo's own lefthook config stays as it is; lefthook merges the two. A local
+config the owner wrote is never changed: the lines to add are printed
+instead, in that file's format."""
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-# A language's checks run in a repo whose root holds one of its build files.
+# A language's checks run for a project folder that holds one of its build files.
 BUILD_FILES = {
     "java": ("pom.xml", "build.gradle", "build.gradle.kts"),
     "python": ("pyproject.toml", "setup.py", "setup.cfg"),
@@ -30,9 +33,13 @@ BUILD_FILES = {
     "typescript": ("package.json", "tsconfig.json"),
 }
 LOCAL_CONFIG = Path(".config/lefthook-local.yml")
-HOOKS_STAMP = Path(".config/flow/hooks.stamp")
+# The stamp the session start leaves in a project folder, here one below the
+# repo root: git matches a line with a slash inside it from the root only,
+# unless it starts with **/.
+HOOKS_STAMP = Path("project/.config/flow/hooks.stamp")
 # Each line flow adds to the global ignore file, with a file it keeps out.
-IGNORE_LINES = {"lefthook-local.yml": LOCAL_CONFIG, ".config/flow/": HOOKS_STAMP}
+IGNORE_LINES = {"lefthook-local.yml": LOCAL_CONFIG, "**/.config/flow/": HOOKS_STAMP}
+REPO_ROOT = Path(".")
 # flow's folder inside git's own folder for the repo, as sh finds it at run
 # time. Every worktree shares it and the hooks beside it, so what flow keeps
 # there reaches a worktree git worktree add just made, which gets none of
@@ -50,6 +57,9 @@ COPY_LOCAL_CONFIG = (f"[ -e {LOCAL_CONFIG} ] || [ ! -f {SHARED_LOCAL_CONFIG} ] |
                      f"{{ mkdir -p {LOCAL_CONFIG.parent} && cp {SHARED_LOCAL_CONFIG} {LOCAL_CONFIG}; }}")
 NOT_A_REPO = ("Run this inside a git repository: cd into it, then run mise run flow:setup-hooks "
               "again.")
+NOT_A_FOLDER_OF_THE_REPO = "{} is not a folder of this repo: name a folder inside it, then run this again."
+NO_LANGUAGE = ("This repo runs none of flow's checks yet: no {} is in {}. To give a project folder its "
+               "checks, run mise run flow:setup-hooks <folder>.")
 NO_LEFTHOOK = "lefthook is missing: run /flow:sync, which installs it, then run this again."
 NO_MISE_ON_PATH = "mise is not on PATH: add its folder to PATH, then run this again."
 JOB_FILE_MISSING = "{} is missing, so flow's checks can't run: run /flow:sync, then commit again."
@@ -66,18 +76,68 @@ def find_global_lefthook(mise):
     return data_dir / "installs/lefthook/global/lefthook"
 
 
-def detect_languages():
-    """The languages the repo root holds a build file of."""
+def find_project_folder(folder, repo_root):
+    """folder as a path from the repo root. The task stops on a folder that
+    is missing or belongs to another repo."""
+    if not folder.is_dir():
+        sys.exit(NOT_A_FOLDER_OF_THE_REPO.format(folder))
+
+    located = subprocess.run(["git", "rev-parse", "--show-toplevel", "--show-prefix"], cwd=folder,
+                             capture_output=True, text=True).stdout.splitlines()
+    if located[:1] != [repo_root]:
+        sys.exit(NOT_A_FOLDER_OF_THE_REPO.format(folder))
+
+    # git prints an empty line for the root, and Path("") is Path(".").
+    return Path("".join(located[1:]))
+
+
+def remember_project_folders(shared_folder, project_folders):
+    """The repo's project folders: its root, the ones earlier runs named and
+    these. A run that names none, as a session start does, keeps the others'
+    checks. The list only grows: a folder missing from one worktree's branch
+    must not lose its checks in the others."""
+    remembered = shared_folder / "projects"
+    earlier = remembered.read_text().splitlines() if remembered.exists() else []
+    project_folders = sorted({REPO_ROOT, *map(Path, earlier), *project_folders})
+    shared_folder.mkdir(parents=True, exist_ok=True)
+    remembered.write_text("".join(f"{project_folder}\n" for project_folder in project_folders))
+    return project_folders
+
+
+def detect_languages(project_folder):
+    """The languages project_folder holds a build file of."""
     return [language for language, build_files in BUILD_FILES.items()
-            if any(Path(build_file).exists() for build_file in build_files)]
+            if any((project_folder / build_file).exists() for build_file in build_files)]
 
 
-def find_job_files(languages):
-    """flow's job file for each of languages. MISE_CONFIG_ROOT is the conf.d
-    link /flow:sync points at the current plugin, so these paths outlive a
-    plugin update."""
+def render_folder_job_file(job_file, project_folder):
+    """job_file's jobs, each run inside project_folder for the staged files
+    under it: lefthook's root. lefthook merges jobs of one name, so the
+    folder joins each name. flow's job files give every job a name line,
+    which a pattern finds: the task's Python has no YAML library."""
+    root = json.dumps(f"{project_folder}/")
+    return re.sub(r"^( *)- name: (.*)$",
+                  lambda job: (f"{job[1]}- name: {json.dumps(f'{job[2]} in {project_folder}')}\n"
+                               f"{job[1]}  root: {root}"),
+                  job_file.read_text(), flags=re.MULTILINE)
+
+
+def find_job_files(project_folder, shared_folder):
+    """flow's job file for each language of project_folder. MISE_CONFIG_ROOT
+    is the conf.d link /flow:sync points at the current plugin, so these
+    paths outlive a plugin update. A project below the repo root gets a copy
+    of each in the shared folder, which runs inside it."""
     jobs_folder = Path(os.environ["MISE_CONFIG_ROOT"]) / "lefthook"
-    return [str(jobs_folder / f"{language}.yml") for language in languages]
+    job_files = [jobs_folder / f"{language}.yml" for language in detect_languages(project_folder)]
+    if project_folder == REPO_ROOT:
+        return [str(job_file) for job_file in job_files]
+
+    folder_jobs = shared_folder / "jobs" / project_folder
+    folder_jobs.mkdir(parents=True, exist_ok=True)
+    for job_file in job_files:
+        (folder_jobs / job_file.name).write_text(render_folder_job_file(job_file, project_folder))
+
+    return [str(folder_jobs / job_file.name) for job_file in job_files]
 
 
 def render_settings(settings, file_format):
@@ -151,28 +211,46 @@ def write_rc(mise, job_files, shared_folder):
     (shared_folder / "lefthook-rc").write_text("".join(f"{line}\n" for line in lines))
 
 
-def is_task_written_local_config(config, settings):
-    """The local config a run of this task wrote, for any of flow's
-    languages. A rerun rewrites it, so a build file added since gets its
-    checks. An edit makes the file the owner's, except one that only adds
-    or drops flow's own job files: that reads as another run's file."""
+def read_flow_job_files(text, shared_folder):
+    """The job files a local config extends when each is one of flow's, the
+    plugin's or a project folder's copy; None otherwise."""
+    extends = next((line.removeprefix("extends: ") for line in text.splitlines()
+                    if line.startswith("extends: ")), "")
+    try:
+        job_files = json.loads(extends)
+    except json.JSONDecodeError:
+        return None
+
+    flow_folders = (Path(os.environ["MISE_CONFIG_ROOT"]) / "lefthook", shared_folder / "jobs")
+    is_flows = isinstance(job_files, list) and all(
+        isinstance(job_file, str) and any(Path(job_file).is_relative_to(folder) for folder in flow_folders)
+        for job_file in job_files)
+    return job_files if is_flows else None
+
+
+def is_task_written_local_config(config, settings, shared_folder):
+    """The local config a run of this task wrote, for any project folders
+    and languages. A rerun rewrites it, so a build file or a folder added
+    since gets its checks. An edit makes the file the owner's, except one
+    that only adds or drops flow's own job files: that reads as another
+    run's file."""
     if config != LOCAL_CONFIG:
         return False
 
     text = config.read_text()
-    return any(render_local_config({**settings, "rc": rc, "extends": find_job_files(languages)}) == text
-               for rc in (SHARED_RC, RC_IN_THE_COMMITTING_WORKTREE)
-               for count in range(len(BUILD_FILES) + 1)
-               for languages in itertools.combinations(BUILD_FILES, count))
+    job_files = read_flow_job_files(text, shared_folder)
+    return job_files is not None and any(
+        render_local_config({**settings, "rc": rc, "extends": job_files}) == text
+        for rc in (SHARED_RC, RC_IN_THE_COMMITTING_WORKTREE))
 
 
-def find_owners_local_config(settings):
+def find_owners_local_config(settings, shared_folder):
     """A lefthook-local config this task did not write, or None. lefthook
     reads only one local config, so a second one would never load."""
     configs = [*Path().glob("lefthook-local.*"), *Path().glob(".lefthook-local.*"),
                *Path().glob(".config/lefthook-local.*")]
     return next((config for config in configs
-                 if not is_task_written_local_config(config, settings)), None)
+                 if not is_task_written_local_config(config, settings, shared_folder)), None)
 
 
 def install_hooks(lefthook, config_text, shared_folder):
@@ -188,7 +266,13 @@ def install_hooks(lefthook, config_text, shared_folder):
 
     is_installed = False
     try:
-        is_installed = subprocess.run([lefthook, "install"]).returncode == 0
+        # Shown only when it fails: its own lines name the blank lefthook.yml
+        # as an added config, which is gone again when this returns.
+        installed = subprocess.run([lefthook, "install"], stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT, text=True)
+        is_installed = installed.returncode == 0
+        if not is_installed:
+            print(installed.stdout, end="")
     finally:
         if not had_lefthook_yml:
             Path("lefthook.yml").unlink(missing_ok=True)
@@ -202,12 +286,31 @@ def install_hooks(lefthook, config_text, shared_folder):
     return is_installed
 
 
+def describe_checks(project_folders):
+    """The line the task ends on: each folder's languages, or what it looked
+    for when no folder holds a build file flow knows."""
+    checks = [language if project_folder == REPO_ROOT else f"{language} in {project_folder}"
+              for project_folder in project_folders for language in detect_languages(project_folder)]
+    if checks:
+        return f"This repo now runs flow's checks for {', '.join(checks)}."
+
+    build_files = [build_file for language_files in BUILD_FILES.values() for build_file in language_files]
+    looked_in = ["its root" if project_folder == REPO_ROOT else str(project_folder)
+                 for project_folder in project_folders]
+    return NO_LANGUAGE.format(", ".join(build_files[:-1]) + f" or {build_files[-1]}", " or ".join(looked_in))
+
+
 def main():
+    # The folder the task starts in is a project folder, and so is each
+    # folder named after it, read from there.
+    started_in = Path(os.environ.get("FLOW_PROJECT_DIR") or Path.cwd())
     repo_root = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE,
-                               text=True, cwd=os.environ.get("FLOW_PROJECT_DIR"))
+                               text=True, cwd=started_in)
     if repo_root.returncode != 0:
         sys.exit(NOT_A_REPO)
 
+    named_folders = [find_project_folder(folder, repo_root.stdout.strip())
+                     for folder in (started_in, *(started_in / name for name in sys.argv[1:]))]
     os.chdir(repo_root.stdout.strip())
 
     # mise runs a task without adding its own folder to PATH.
@@ -219,18 +322,19 @@ def main():
     if not lefthook.exists():
         sys.exit(NO_LEFTHOOK)
 
-    languages = detect_languages()
+    shared_folder = find_shared_folder()
+    project_folders = remember_project_folders(shared_folder, named_folders)
     # The lefthook option runs mise's lefthook ahead of any other on PATH.
     # One quoted sh word: lefthook writes it into the hooks as it is.
     settings = {"lefthook": shlex.quote(str(lefthook)), "rc": SHARED_RC,
-                "extends": find_job_files(languages)}
+                "extends": [job_file for project_folder in project_folders
+                            for job_file in find_job_files(project_folder, shared_folder)]}
     config_text = render_local_config(settings)
-    shared_folder = find_shared_folder()
 
     write_rc(mise, settings["extends"], shared_folder)
     ignore_flow_files()
 
-    owners_config = find_owners_local_config(settings)
+    owners_config = find_owners_local_config(settings, shared_folder)
     if owners_config is not None:
         placement, lines = render_settings(settings, owners_config.suffix)
         print(f"{owners_config} already exists, so it stays as it is. {placement}:\n")
@@ -241,8 +345,7 @@ def main():
     if not install_hooks(lefthook, config_text, shared_folder):
         sys.exit("lefthook install failed: fix what it printed above, then run this again.")
 
-    checked = ", ".join(languages) or "no language: no build file flow knows is at its root"
-    print(f"This repo now runs flow's checks for {checked}.")
+    print(describe_checks(project_folders))
 
 
 if __name__ == "__main__":
