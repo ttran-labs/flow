@@ -18,8 +18,9 @@ Set up flow's checks in the repo the user is working in.
 3. When it exits non-zero, report the line above mise's
    `[flow:setup-hooks] ERROR task failed` as the error: it names what is
    missing and how to fix it.
-4. Tell the user that every worktree needs this too: the local config is
-   ignored, so `git worktree add` leaves it out, and a commit in a worktree
-   without it runs no checks. The first session in a worktree runs it, and
-   the git-convention skill runs it in every new ticket worktree. Running it again in a repo gives the same file and
-   installs any hooks a newer flow added.
+4. Tell the user that a new worktree needs nothing typed: the local config is
+   ignored, so `git worktree add` leaves it out, and the worktree's first
+   commit copies it in from the repo's `.git/flow/` folder, where the task
+   keeps a copy of it and the rc the hooks load first. Running the task
+   again in a repo gives the same file and installs any hooks a newer flow
+   added.

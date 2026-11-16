@@ -7,9 +7,12 @@ session start sets the project up, flow's checks. It finds the languages
 from the build files at the repo root and writes .config/lefthook-local.yml,
 which extends flow's job file for each of those languages, keeps that file
 and the hidden .config/flow folder out of git through the global ignore
-file, and installs the hooks. The repo's own lefthook config stays as it is;
-lefthook merges the two. A local config the owner wrote is never changed:
-the lines to add are printed instead, in that file's format."""
+file, and installs the hooks. The rc the hooks load and a copy of the local
+config go into git's own folder for the repo, which every worktree shares,
+so a worktree made later gets the config at its first commit. The repo's own
+lefthook config stays as it is; lefthook merges the two. A local config the
+owner wrote is never changed: the lines to add are printed instead, in that
+file's format."""
 import itertools
 import json
 import os
@@ -27,14 +30,24 @@ BUILD_FILES = {
     "typescript": ("package.json", "tsconfig.json"),
 }
 LOCAL_CONFIG = Path(".config/lefthook-local.yml")
-RC_FILE = Path(".config/flow/lefthook-rc")
-# Each line flow adds to the global ignore file, with the file it keeps out.
-IGNORE_LINES = {"lefthook-local.yml": LOCAL_CONFIG, ".config/flow/": RC_FILE}
-# Every worktree of a repo shares one set of hooks, and the last lefthook
-# install writes this value into them as sh, unquoted. Found at run time, it
-# names the rc of the worktree git commits in, so removing another worktree
-# never breaks it.
-RC_IN_THE_COMMITTING_WORKTREE = f'"$(git rev-parse --show-toplevel)/{RC_FILE}"'
+HOOKS_STAMP = Path(".config/flow/hooks.stamp")
+# Each line flow adds to the global ignore file, with a file it keeps out.
+IGNORE_LINES = {"lefthook-local.yml": LOCAL_CONFIG, ".config/flow/": HOOKS_STAMP}
+# flow's folder inside git's own folder for the repo, as sh finds it at run
+# time. Every worktree shares it and the hooks beside it, so what flow keeps
+# there reaches a worktree git worktree add just made, which gets none of
+# the ignored files.
+SHARED_FOLDER = "$(git rev-parse --path-format=absolute --git-common-dir)/flow"
+# lefthook install writes the rc value into the hooks as sh, unquoted.
+SHARED_RC = f'"{SHARED_FOLDER}/lefthook-rc"'
+SHARED_LOCAL_CONFIG = f'"{SHARED_FOLDER}/lefthook-local.yml"'
+# The rc value flow wrote before the rc moved into the shared folder.
+RC_IN_THE_COMMITTING_WORKTREE = '"$(git rev-parse --show-toplevel)/.config/flow/lefthook-rc"'
+# lefthook reads its config only from the worktree git commits in. The hook
+# sources the rc before it starts lefthook, so the rc puts the config there
+# when the worktree has none.
+COPY_LOCAL_CONFIG = (f"[ -e {LOCAL_CONFIG} ] || [ ! -f {SHARED_LOCAL_CONFIG} ] || "
+                     f"{{ mkdir -p {LOCAL_CONFIG.parent} && cp {SHARED_LOCAL_CONFIG} {LOCAL_CONFIG}; }}")
 NOT_A_REPO = ("Run this inside a git repository: cd into it, then run mise run flow:setup-hooks "
               "again.")
 NO_LEFTHOOK = "lefthook is missing: run /flow:sync, which installs it, then run this again."
@@ -116,18 +129,26 @@ def ignore_flow_files():
         ignore.write("\n" + "".join(f"{line}\n" for line in missing_lines))
 
 
-def write_rc(mise, job_files):
+def find_shared_folder():
+    """SHARED_FOLDER as sh resolves it in the worktree the task runs in, so
+    the task writes where the hooks will read."""
+    resolved = subprocess.run(["sh", "-c", f'printf %s "{SHARED_FOLDER}"'], capture_output=True,
+                              text=True)
+    return Path(resolved.stdout)
+
+
+def write_rc(mise, job_files, shared_folder):
     """lefthook sources this file before every hook. A GUI git client starts
     hooks with the system PATH, which has no mise, so mise's folder goes on
     it, appended so a shell's own mise wins. lefthook skips a missing extends
     file without a word, so a job file gone with a dead conf.d link blocks
     the commit here."""
-    lines = [f'PATH="$PATH":{shlex.quote(str(Path(mise).parent))}', "export PATH"]
+    lines = [f'PATH="$PATH":{shlex.quote(str(Path(mise).parent))}', "export PATH", COPY_LOCAL_CONFIG]
     lines += [f"[ -f {shlex.quote(job_file)} ] || "
               f"{{ echo {shlex.quote(JOB_FILE_MISSING.format(job_file))}; exit 1; }}"
               for job_file in job_files]
-    RC_FILE.parent.mkdir(parents=True, exist_ok=True)
-    RC_FILE.write_text("".join(f"{line}\n" for line in lines))
+    shared_folder.mkdir(parents=True, exist_ok=True)
+    (shared_folder / "lefthook-rc").write_text("".join(f"{line}\n" for line in lines))
 
 
 def is_task_written_local_config(config, settings):
@@ -139,7 +160,8 @@ def is_task_written_local_config(config, settings):
         return False
 
     text = config.read_text()
-    return any(render_local_config({**settings, "extends": find_job_files(languages)}) == text
+    return any(render_local_config({**settings, "rc": rc, "extends": find_job_files(languages)}) == text
+               for rc in (SHARED_RC, RC_IN_THE_COMMITTING_WORKTREE)
                for count in range(len(BUILD_FILES) + 1)
                for languages in itertools.combinations(BUILD_FILES, count))
 
@@ -153,10 +175,11 @@ def find_owners_local_config(settings):
                  if not is_task_written_local_config(config, settings)), None)
 
 
-def install_hooks(lefthook, config_text):
-    """Write the local config and install the hooks. Until they are
-    installed, any stop, a failure or an interruption, takes the local
-    config back out, so a rerun starts clean."""
+def install_hooks(lefthook, config_text, shared_folder):
+    """Write the local config and install the hooks, then keep a copy of the
+    config in the shared folder for the rc to hand to a new worktree. Until
+    the hooks are installed, any stop, a failure or an interruption, takes
+    the local config back out, so a rerun starts clean."""
     # lefthook install writes a blank lefthook.yml into a repo with no main
     # config, even when it fails. The local config loads without one.
     had_lefthook_yml = Path("lefthook.yml").exists()
@@ -172,6 +195,9 @@ def install_hooks(lefthook, config_text):
 
         if not is_installed:
             LOCAL_CONFIG.unlink()
+
+    if is_installed:
+        (shared_folder / "lefthook-local.yml").write_text(config_text)
 
     return is_installed
 
@@ -196,11 +222,12 @@ def main():
     languages = detect_languages()
     # The lefthook option runs mise's lefthook ahead of any other on PATH.
     # One quoted sh word: lefthook writes it into the hooks as it is.
-    settings = {"lefthook": shlex.quote(str(lefthook)), "rc": RC_IN_THE_COMMITTING_WORKTREE,
+    settings = {"lefthook": shlex.quote(str(lefthook)), "rc": SHARED_RC,
                 "extends": find_job_files(languages)}
     config_text = render_local_config(settings)
+    shared_folder = find_shared_folder()
 
-    write_rc(mise, settings["extends"])
+    write_rc(mise, settings["extends"], shared_folder)
     ignore_flow_files()
 
     owners_config = find_owners_local_config(settings)
@@ -211,7 +238,7 @@ def main():
         print(f"Then run {shlex.quote(str(lefthook))} install.")
         return
 
-    if not install_hooks(lefthook, config_text):
+    if not install_hooks(lefthook, config_text, shared_folder):
         sys.exit("lefthook install failed: fix what it printed above, then run this again.")
 
     checked = ", ".join(languages) or "no language: no build file flow knows is at its root"

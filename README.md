@@ -166,11 +166,10 @@ for only those languages, and installs the git hooks. Every commit then
 runs those checks, also from a GUI git client like IntelliJ. It adds the
 files it writes to git's global ignore file, so `git status` stays clean.
 
-A new worktree needs it too: the local config is ignored, so `git worktree
-add` leaves it out, and a commit there runs no checks until it is set up.
-The first session in the worktree does that, and so does
-`mise run flow:setup-hooks` in it, which the git-convention skill runs for
-every ticket worktree.
+A new worktree needs nothing typed: the local config is ignored, so `git
+worktree add` leaves it out, and the worktree's first commit copies it in
+from the repo's `.git/flow/` folder, where the task keeps a copy of it and
+the rc the hooks load first.
 
 ## Update
 
