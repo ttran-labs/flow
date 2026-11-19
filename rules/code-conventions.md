@@ -49,7 +49,9 @@ short or clever code. On conflict: fewest concepts first, then fewest lines.
 
 9. Blank lines between steps: after each if/match block, and between
    groups of statements doing different steps, so the steps show at a
-   glance.
+   glance. Also between declarations that carry an attribute or span several
+   lines, such as enum variants and constants, as Java separates the members
+   of a class.
 
 10. No emoji. Each language's standard formatter and linter at their
     defaults: rustfmt and clippy with warnings as errors for Rust, gofmt for

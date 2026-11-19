@@ -65,8 +65,8 @@ mode = "symlink-each"
 # lefthook starts each job in the repository root; without this, flow's
 # tasks would run in this folder.
 dir = "{{ cwd }}"
-# The tasks with real logic, in Python. A file's path names its task:
-# tasks/flow/setup-hooks is flow:setup-hooks.
+# The tasks with real logic that are still Python or sh. A file's path names
+# its task: tasks/flow/guard-commit is flow:guard-commit.
 includes = ["tasks"]
 
 # Every flow env, named once. Each step that writes mise's global lock loads
@@ -118,13 +118,27 @@ depends = ["flow:sync:*"]
 # and rustc's temporary files into the sandbox folder. The project stays
 # read-only. --locked: a commit never rewrites Cargo.lock. Both check the
 # whole crate, so their jobs pass no file names.
+# Four lints clippy leaves off are on. The two size hints only print: rustc's
+# force-warn level, which warnings-as-errors leaves alone.
+# clippy reads one config file, the first it finds, and merges none: a
+# project that tracks a clippy.toml of its own keeps its own numbers.
 [tasks."flow:lint:clippy"]
-description = "Check a Rust project with clippy, warnings as errors"
+description = "Check a Rust project with clippy: warnings as errors, the size hints printed"
 hide = true
 dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
 env = { PATH = "{{ env.HOME }}/.cargo/bin:{{ env.PATH }}", CARGO_TARGET_DIR = "{{ env.HOME }}/.cache/flow/cargo-target", TMPDIR = '{{ get_env(name="FLOW_SANDBOX_DIR", default="/tmp") }}' }
 allow_write = ["~/.cache/flow/cargo-target", '{{ get_env(name="CARGO_HOME", default=env.HOME ~ "/.cargo") }}']
-run = "cargo clippy --locked --all-targets -- -D warnings"
+run = '''
+[ -n "$(git ls-files clippy.toml .clippy.toml '*/clippy.toml' '*/.clippy.toml' 2>/dev/null)" ] || export CLIPPY_CONF_DIR="{{ config_root }}/lint/clippy"
+cargo clippy --locked --all-targets -- \
+  -D warnings \
+  -W clippy::dbg_macro \
+  -W clippy::todo \
+  -W clippy::undocumented_unsafe_blocks \
+  -W clippy::allow_attributes_without_reason \
+  --force-warn clippy::too_many_lines \
+  --force-warn clippy::cognitive_complexity
+'''
 
 [tasks."flow:lint:rustfmt"]
 description = "Check a Rust project's formatting with rustfmt, without rewriting a file"
@@ -132,6 +146,11 @@ hide = true
 dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
 env = { PATH = "{{ env.HOME }}/.cargo/bin:{{ env.PATH }}" }
 run = "cargo fmt --check"
+
+[tasks."flow:setup-hooks"]
+description = "Point this repo's git hooks at flow's checks for the languages its project folders build"
+hide = true
+run = "flow-cli setup-hooks"
 
 [tasks."flow:sandbox"]
 description = "Run one of flow's check tasks so that it cannot change the project's files: flow:sandbox -- <task> <arguments>"

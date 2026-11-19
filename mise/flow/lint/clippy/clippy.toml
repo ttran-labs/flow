@@ -1,0 +1,5 @@
+# The first two only print, as size hints. The third blocks: a function with
+# 5 parameters or more, self counted.
+too-many-lines-threshold = 40
+cognitive-complexity-threshold = 15
+too-many-arguments-threshold = 4

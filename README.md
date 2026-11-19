@@ -93,7 +93,12 @@ repo is also checked by Java's own tools at their defaults, on flow's own
 Java: PMD's quickstart rules block, and Checkstyle's Google style reports
 without blocking. A Rust repo is checked by clippy, with warnings as errors, and
 by a rustfmt check, both from the project's own toolchain; clippy's build
-output goes to a folder flow keeps outside the repo.
+output goes to a folder flow keeps outside the repo. Two size hints print
+and never block: a function over 40 lines, or over a cognitive complexity
+of 15. A function with 5 parameters or more blocks, and so do four things
+clippy leaves off by default: a `dbg!` or a `todo!` left in, an `unsafe`
+block with no SAFETY comment, and a lint silenced with no reason given. A
+project that tracks a clippy.toml of its own keeps its own numbers.
 
 A JS or TS repo is also linted and format-checked by Biome at its defaults:
 the recommended rules, and the formatter with spaces. A project with its own
@@ -171,6 +176,12 @@ below the root gets jobs that run inside it, for the staged files under it,
 so a repo with no build file at its root still gets its projects' checks.
 It adds the files it writes to git's global ignore file, so `git status`
 stays clean.
+
+A lefthook-local config you wrote yourself is never changed. The command
+prints the settings that file still needs, in its format, as keys to add and
+keys to put in place of its own; once it holds them, running the command
+again installs the hooks. When the command refuses, it prints one line,
+`flow setup-hooks [<case>]: <what is wrong and the fix>`.
 
 A new worktree needs nothing typed: the local config is ignored, so `git
 worktree add` leaves it out, and the worktree's first commit copies it in
