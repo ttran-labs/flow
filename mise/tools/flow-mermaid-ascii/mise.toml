@@ -1,0 +1,13 @@
+# mermaid-ascii, which draws a sequence diagram or a flowchart as plain ASCII
+# for the terminal. /flow:sync links this folder as
+# ~/.config/mise/conf.d/flow-mermaid-ascii, and its module reruns only when a
+# file in it changed.
+[tools]
+mermaid-ascii = "1"
+
+[tasks."flow:sync:mermaid-ascii"]
+description = "Move mermaid-ascii to the newest release inside its major"
+hide = true
+extends = "flow:move-tool"
+vars = { tool = "mermaid-ascii" }
+sources = ["{{ config_root }}/**"]

@@ -37,11 +37,8 @@ Done when: the vault path exists and its folders are known.
 - A code symbol with a generated code-graph note is linked by name:
   `[[SymbolName]]`, methods as `[[dot-MethodName()]]`. The vault's
   `CONVENTIONS.md` has the full naming table.
-- An HTML file gets a one-line markdown stub that links it, so markdown
-  search still finds it.
 
-Done when: the note is in its kind's folder, links its related notes, and
-any HTML file has its stub.
+Done when: the note is in its kind's folder and links its related notes.
 
 ## 3. Link it from an index
 

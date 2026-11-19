@@ -57,8 +57,10 @@ Done when: every commit message on the branch reads
 1. Typed link line: `Fixes`, `Refactors` or `Features #N`, then related
    tickets.
 2. Why, in 1 to 3 lines.
-3. Two diagrams: a high-level C4 view of where the change sits, and a
-   low-level view of what changed.
+3. Diagrams, in mermaid, in this order: a C4 view of where the change sits;
+   a sequence diagram of the changed flow, its new calls marked; and a
+   low-level view of what changed only when the change adds, moves or
+   removes types or files.
 4. Code-change view: the before/after or the table of cases that matters,
    not the diff.
 5. Differences from the ticket, or "none".
@@ -86,6 +88,11 @@ a node whose status and address disagree.
 
 graph LR
   S[from_snapshot, import, seed] --> L[long_term *changed*] --> G[(graph)]
+
+sequenceDiagram
+  supersede->>long_term: load replacement
+  long_term->>check_consistency: status and address agree? *new*
+  check_consistency-->>supersede: refused
 
 graph TD
   C[check_consistency] --> W[forwarding-walk checks] --> A[status and address agree *new*]
