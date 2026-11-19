@@ -113,7 +113,9 @@ language: the names in the code are the names the business uses.
 
 - **Comments are a confession.** Fix the code, not the comment. Exceptions:
   non-obvious external constraints, measured performance reasons, spec/RFC
-  references, TODOs with ticket numbers.
+  references, TODOs with ticket numbers. Comment lines stay under 10% of the
+  lines a PR adds or changes: the push hook and the PR check refuse a branch
+  at or over it.
 - **Speculative abstractions are debt.** No fields, params, interfaces, or
   extension points for imagined futures. If removing it breaks no current caller,
   remove it.

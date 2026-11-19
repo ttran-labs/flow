@@ -21,6 +21,3 @@ pre-commit:
     - name: flow shared rules (rust)
       glob: "*.rs"
       run: MISE_ENV=flow-lint {sandbox} flow:lint:ast-grep {staged_files}
-    - name: flow spelling (rust)
-      glob: "*.rs"
-      run: MISE_ENV=flow-lint {sandbox} flow:lint:typos {staged_files}

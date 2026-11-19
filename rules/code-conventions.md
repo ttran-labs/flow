@@ -15,6 +15,8 @@ short or clever code. On conflict: fewest concepts first, then fewest lines.
    explaining gets rewritten until it doesn't. A comment states only what
    the code cannot show, such as a constraint or a deliberate ceiling. Which
    ticket or review asked for a change belongs in the commit, not the code.
+   A PR's share of comment lines is capped, as a hard block; the number is
+   clean-code's.
 
 3. Explicit names, with boundary context. Names come from the domain; a
    reader who knows the problem reads the line without looking anything up.

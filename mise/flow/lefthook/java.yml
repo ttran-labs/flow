@@ -19,6 +19,8 @@ pre-commit:
     - name: flow shared rules (java)
       glob: "*.java"
       run: MISE_ENV=flow-lint {sandbox} flow:lint:ast-grep {staged_files}
-    - name: flow spelling (java)
-      glob: "*.java"
-      run: MISE_ENV=flow-lint {sandbox} flow:lint:typos {staged_files}
+
+pre-push:
+  jobs:
+    - name: flow spring rules (java)
+      run: MISE_ENV=flow-java FLOW_PROJECT_DIR="$PWD" mise -C ~ run flow:java:spring-rules

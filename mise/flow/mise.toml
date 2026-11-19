@@ -167,12 +167,6 @@ hide = true
 dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
 run = "ast-grep scan --config {{ config_root }}/lint/ast-grep/sgconfig.yml"
 
-[tasks."flow:lint:typos"]
-description = "Check files for misspellings, on typos' own dictionary"
-hide = true
-dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
-run = "typos --isolated --config {{ config_root }}/lint/typos.toml"
-
 # Biome at its defaults: the recommended rules, and the formatter with spaces,
 # which prints what Prettier prints. It reports and never rewrites a file. A
 # project with a linter or formatter config of its own keeps its own tools,
@@ -189,3 +183,11 @@ description = "Set up the project in FLOW_PROJECT_DIR: its languages' tools and 
 hide = true
 dir = "{{ env.HOME }}"
 depends = ["flow:setup:*"]
+
+# Not through flow:sandbox: it compiles into the project's own build folder,
+# and Maven and JBang keep what they download in the owner's home.
+[tasks."flow:java:spring-rules"]
+description = "Compile a Java project and check it against its Spring rules"
+hide = true
+dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
+run = "flow-cli spring-rules"

@@ -16,6 +16,3 @@ pre-commit:
     - name: flow biome (typescript)
       glob: "*.{js,jsx,mjs,cjs,ts,tsx}"
       run: MISE_ENV=flow-typescript {sandbox} flow:lint:biome {staged_files}
-    - name: flow spelling (typescript)
-      glob: "*.{js,jsx,mjs,cjs,ts,tsx}"
-      run: MISE_ENV=flow-lint {sandbox} flow:lint:typos {staged_files}

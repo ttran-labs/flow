@@ -87,8 +87,8 @@ writable.
 
 Every commit in a Rust, JS/TS or Java repo is checked against flow's shared
 rules, the ones that hold in any language: no emoji and no em or en dash in a
-comment or a string, no ticket id in a comment, and no misspelling. ast-grep
-checks the first three and typos the last, each through the sandbox. A Java
+comment or a string, and no ticket id in a comment. ast-grep checks all three
+on the files a commit stages, through the sandbox. A Java
 repo is also checked by Java's own tools at their defaults, on flow's own
 Java: PMD's quickstart rules block, and Checkstyle's Google style reports
 without blocking. A Rust repo is checked by clippy, with warnings as errors, and
