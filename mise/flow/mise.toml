@@ -190,4 +190,4 @@ depends = ["flow:setup:*"]
 description = "Compile a Java project and check it against its Spring rules"
 hide = true
 dir = '{{ get_env(name="FLOW_PROJECT_DIR", default=cwd) }}'
-run = "flow-cli spring-rules"
+run = "flow-cli spring-rules {{ config_root }}/lint/spring-rules"
